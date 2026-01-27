@@ -1,29 +1,54 @@
+import os
+from pathlib import Path
 from ultralytics import YOLO
+
+# === 1. 动态计算路径 (核心修复) ===
+# 获取当前脚本文件的绝对路径
+FILE = Path(__file__).resolve()
+# 获取项目根目录 (即 scripts 文件夹的上一级)
+# parents[0] 是 scripts, parents[1] 是 Yolo_Version_Project
+ROOT = FILE.parents[1]
 
 
 def train_model():
-    # 1. 加载模型
-    # 建议先用 yolo11n.pt (最新版 Nano)，如果报错找不到文件，改回 yolov8n.pt
-    # 确保 weights/yolo11n.pt 存在，不存在会自动下载
-    print("🚀 正在加载模型...")
-    model = YOLO('weights/yolo11n.pt')
+    # 使用 join 拼接出绝对路径，彻底解决找不到文件的问题
+    # 相当于: "D:/.../Yolo_Version_Project/weights/yolo11n.pt"
+    model_path = ROOT / 'weights' / 'yolo11n.pt'
+    config_path = ROOT / 'configs' / 'custom_data.yaml'
 
-    # 2. 开始训练 (CPU 专用参数配置)
+    # 打印出来给你看一眼，让你放心
+    print(f"📍 项目根目录定位: {ROOT}")
+    print(f"🔍 寻找模型路径: {model_path}")
+
+    # 🛡️ 检查文件是否存在
+    if not model_path.exists():
+        print(f"❌ 严重错误！在 {model_path} 依然找不到模型。")
+        print("请检查：1. 文件名是不是 yolo11n.pt.pt (Windows隐藏后缀坑)？")
+        print("        2. weights 文件夹是不是真的在根目录下？")
+        return
+
+    print("✅ 成功定位模型文件！")
+
+    # 加载模型 (注意要转成 str 字符串格式传给 YOLO)
+    model = YOLO(str(model_path))
+
+    # === 2. 开始训练 ===
     print("🔥 开始训练 (CPU模式)...")
-    results = model.train(
-        data='configs/custom_data.yaml',  # 指定刚才写的配置文件
-        epochs=10,  # CPU 跑 10 轮意思一下，验证流程通不通
-        imgsz=640,  # 标准图像大小
-        device='cpu',  # 强制使用 CPU
-        workers=0,  # Windows 用户必选！防止 DataLoader 蓝屏或报错
-        batch=4,  # 批次大小，CPU 建议 4 或 8，太大跑不动
-        project='runs/train',  # 结果保存路径
-        name='citrus_cpu_exp',  # 本次实验的名字
-        exist_ok=True,  # 允许覆盖同名实验
-        amp=False  # 关闭混合精度 (CPU 上有时候开启反而慢或报错)
+    model.train(
+        data=str(config_path),  # 配置文件也要用绝对路径，防止找不到
+        epochs=10,
+        imgsz=640,
+        device='cpu',
+        workers=0,
+        batch=4,
+        project=str(ROOT / 'runs/train'),  # 结果保存路径也指定好
+        name='citrus_cpu_exp',
+        exist_ok=True,
+        amp=False,
+        plots=True
     )
 
-    print("✅ 训练结束！去 runs/train/citrus_cpu_exp 查看结果吧！")
+    print("✅ 训练流程结束！")
 
 
 if __name__ == '__main__':
