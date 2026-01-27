@@ -1,0 +1,25 @@
+# === 数据集路径设置 ===
+# 指向我们刚才用 split_data.py 生成的那个文件夹
+# 这里的 .. 表示回退到根目录，进入 datasets
+path: ../datasets/citrus_mini
+train: images/train
+val: images/val
+
+# === 类别名称 (从你的 JSON 翻译过来的) ===
+# 必须和 JSON 里的 ID 一一对应
+names:
+  0: S0 others
+  1: S1 Healthy fruit
+  2: S2 Healthy leaf
+  3: S3 Blotchy mottling
+  4: S4 Red nose fruit
+  5: S5 Zinc deficiency
+  6: S6 Vein yellowing
+  7: S7 Uniform yellowing
+  8: S8 Magnesium deficiency
+  9: S9 Boron deficiency
+  10: S10 Anthracnose
+  11: S11 Citrus greasy spot
+  12: S14 Canker       # 注意：你的 JSON 里 ID 12 对应的是 S14
+  13: S13 Sooty mould  # ID 13 对应 S13
+  14: S12 Algal spot   # ID 14 对应 S12
