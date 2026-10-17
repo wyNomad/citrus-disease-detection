@@ -1,28 +1,38 @@
-# --- Python & PyCharm 基础忽略 ---
+# Python and local environments
 __pycache__/
 *.py[cod]
 *$py.class
-.idea/
-.vscode/
+.venv/
 venv/
 .env
+.env.*
+.pytest_cache/
+.ipynb_checkpoints/
 
-# --- YOLO 专项忽略 (重中之重) ---
-# 1. 忽略所有数据集文件夹
+# Editor settings
+.idea/
+.vscode/
+
+# Datasets, generated outputs and local models
 datasets/
-
-# 2. 忽略训练产物 (日志、图表、保存的模型)
 runs/
-
-# 3. 忽略模型权重文件 (不管在哪，都不上传)
+weights/
 *.pt
 *.pth
 *.onnx
 *.engine
-weights/
 
-# 4. 忽略本地下载的图片/视频测试素材
+# Local test media
 *.jpg
+*.jpeg
 *.png
+*.bmp
 *.mp4
-!assets/  # 如果你有专门放README展示图的assets文件夹，可以用感叹号排除忽略
+
+# Keep curated documentation assets
+!assets/
+!assets/**
+
+# OS metadata
+.DS_Store
+Thumbs.db

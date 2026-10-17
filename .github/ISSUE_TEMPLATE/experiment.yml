@@ -1,0 +1,32 @@
+name: 实验记录
+description: 记录数据、配置、评估与预测结果
+title: "[Experiment] "
+labels: []
+body:
+  - type: textarea
+    id: purpose
+    attributes:
+      label: 实验目的
+    validations:
+      required: true
+  - type: textarea
+    id: data
+    attributes:
+      label: 数据与划分
+      description: 来源、版本、类别分布、实际样本数与划分方式。
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: 环境与配置
+      description: 代码版本、依赖版本、设备、权重与训练参数。
+    validations:
+      required: true
+  - type: textarea
+    id: results
+    attributes:
+      label: 结果与分析
+      description: 评估集、指标、预测样例、失败案例；速度请注明测试条件。
+    validations:
+      required: true
