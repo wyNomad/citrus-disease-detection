@@ -10,6 +10,8 @@
 
 </div>
 
+[![Repository checks](https://github.com/wyNomad/citrus-disease-detection/actions/workflows/repository-checks.yml/badge.svg)](https://github.com/wyNomad/citrus-disease-detection/actions/workflows/repository-checks.yml)
+
 ## 项目介绍
 
 本项目面向柑橘果实与叶片图像，使用 Ultralytics YOLO11 开展目标检测实验，包含数据抽样与划分、模型训练、检测结果保存，以及目标像素位置提取。
@@ -100,3 +102,7 @@ python scripts/detect.py
 - [YOLO 检测数据格式](https://docs.ultralytics.com/datasets/detect/)
 
 仓库根目录暂未指定统一许可证；Ultralytics、数据集和预训练权重分别遵循其原有授权说明。
+
+## 维护与协作
+
+问题反馈、修改流程和检查范围见 [维护指南](CONTRIBUTING.md)。提交前可运行本地静态检查；硬件、训练或部署结果需另外记录验证环境。
