@@ -1,4 +1,4 @@
-"""Dependency-free checks for the repository's explicitly selected source and docs."""
+"""Check selected source, configuration and local documentation links."""
 
 import ast
 from html.parser import HTMLParser
@@ -9,6 +9,8 @@ import subprocess
 import sys
 from urllib.parse import unquote, urlsplit
 import xml.etree.ElementTree as ET
+
+import yaml
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -69,6 +71,7 @@ def main():
     checks = {
         "python": (set([".py"]), lambda p: ast.parse(p.read_bytes(), filename=str(p))),
         "xml": (set([".xml", ".svg"]), lambda p: ET.parse(p)),
+        "yaml": (set([".yaml", ".yml", ".repos"]), lambda p: yaml.safe_load(p.read_text(encoding="utf-8"))),
         "markdown": (set([".md"]), lambda p: check_links(p, p.read_text(encoding="utf-8"))),
     }
     errors = []
@@ -77,7 +80,7 @@ def main():
         for path in files:
             try:
                 check(path)
-            except (SyntaxError, ValueError, OSError, ET.ParseError) as exc:
+            except (SyntaxError, ValueError, OSError, ET.ParseError, yaml.YAMLError) as exc:
                 errors.append(f"{path.relative_to(ROOT)}: {exc}")
         print(f"{kind}: {len(files)} file(s) checked")
     if errors:

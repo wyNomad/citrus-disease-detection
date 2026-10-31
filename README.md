@@ -1,108 +1,90 @@
-<div align="center">
+# 柑橘病害检测与 RGB-D 三维定位
 
-<img src="assets/project-header.svg" width="100%" alt="Citrus Disease Detection · 柑橘病害检测" />
+上游准备数据、训练和导出模型；下游接入 **Orbbec Gemini 305（G40351-191）**，输出检测类别、像素位置和相机光学坐标系下的三维位置。
 
-**基于 YOLO11 的柑橘果实与叶片病害检测实验项目**
-
-数据准备 · 模型微调 · 目标检测 · 像素坐标提取
-
-[运行指南](docs/USAGE.md) · [数据与模型](docs/DATA_AND_MODELS.md) · [实验记录](docs/EXPERIMENTS.md)
-
-</div>
-
-[![Repository checks](https://github.com/wyNomad/citrus-disease-detection/actions/workflows/repository-checks.yml/badge.svg)](https://github.com/wyNomad/citrus-disease-detection/actions/workflows/repository-checks.yml)
-
-## 项目介绍
-
-本项目面向柑橘果实与叶片图像，使用 Ultralytics YOLO11 开展目标检测实验，包含数据抽样与划分、模型训练、检测结果保存，以及目标像素位置提取。
-
-当前标签配置共 **15 类**，涵盖健康果实、健康叶片、病害及缺素症状。训练脚本默认使用 YOLO11n 和 CPU 小规模训练配置，便于先验证数据与训练流程，再根据实验需求调整。
-
-*A YOLO11-based experimental project for citrus disease detection, covering dataset preparation, training, inference and pixel-coordinate extraction.*
-
-## 功能与目录
-
-| 入口 | 内容 |
-| --- | --- |
-| [split_data.py](split_data.py) | 配对图片与 YOLO 标签，抽样并划分训练集、验证集 |
-| [configs/custom_data.yaml](configs/custom_data.yaml) | 数据路径与 15 类标签映射 |
-| [scripts/train.py](scripts/train.py) | 使用预训练 YOLO11n 微调，输出训练产物 |
-| [scripts/detect.py](scripts/detect.py) | 加载训练权重进行图片检测，保存标注结果 |
-| [utils/arm_vision.py](utils/arm_vision.py) | 封装检测接口，返回目标类别、置信度与像素框 |
-| [main.py](main.py) | 用本地图片演示目标对准判断与模拟抓取流程 |
-
-核心检测流程：
+开发环境：Ubuntu 22.04 / ROS 2 Humble。目标设备：香橙派 5 Plus / RK3588 / Ubuntu 22.04 ARM64。
+当前阶段完成仓库整合与软件检查；相机实测、定位精度、RK3588 NPU 适配与性能仍待验证。
 
 ```text
-图片 + YOLO 标签
-    → 抽样与训练/验证划分
-    → YOLO11n 微调
-    → 加载 best.pt 检测
-    → 类别、置信度、检测框与像素中心
+图片 + YOLO 标签 → 数据划分 → YOLO 微调 → 权重 / 模型导出
+                                             ↓
+Gemini 305 彩色图 → 公共检测接口 → 多目标检测消息
+Gemini 305 对齐深度 + 彩色内参 ──→ 三维定位 → 目标坐标（米）
 ```
 
-`main.py` 是基于检测结果的应用演示，默认循环读取本地验证图片。相机采集代码尚为注释，串口发送和抓取完成通过打印、延时模拟。
+## 目录
 
-## 环境与快速开始
-
-需要 Python 3。Python 依赖见 [requirements.txt](requirements.txt)；PyTorch 的安装方式需与所用 CPU / GPU 环境匹配。
-
-```bash
-git clone https://github.com/wyNomad/citrus-disease-detection.git
-cd citrus-disease-detection
-
-python3 -m venv .venv
-source .venv/bin/activate
-python -m pip install -r requirements.txt
-```
-
-仓库未附带数据集与权重。先按[数据与模型说明](docs/DATA_AND_MODELS.md)准备标注数据和 `weights/yolo11n.pt`，再依照[运行指南](docs/USAGE.md)核对路径与参数。
-
-从仓库根目录执行：
-
-```bash
-# 数据划分：先核对 SOURCE_ROOT、TARGET_ROOT 和 CLEAN_MODE
-python split_data.py
-
-# 使用 configs/custom_data.yaml 训练
-python scripts/train.py
-
-# 使用训练得到的 best.pt 检测
-python scripts/detect.py
-```
-
-**数据划分脚本默认 `CLEAN_MODE=True`，会删除并重建 `TARGET_ROOT`；请将它设为专用的派生数据目录。** 脚本路径、输出位置和运行顺序见运行指南。
-
-## 当前实现与实验状态
-
-| 项目 | 当前情况 |
+| 目录 | 职责 |
 | --- | --- |
-| 数据准备 | 配对复制、最多抽样 100 张、默认 80% / 20% 划分 |
-| 模型训练 | YOLO11n；默认 10 epochs、640 输入、batch 4、CPU |
-| 推理输出 | 检测框与类别结果图；目标接口返回像素中心和宽高 |
-| 应用扩展 | 本地图片上的对准判断与模拟抓取 |
-| 数据与权重 | 需另行准备，当前不随代码分发 |
-| 实验效果 | 尚未提供可核对的数据规模、mAP、速度或效果图 |
+| [src/citrus_vision](src/citrus_vision) | 共用推理接口、运行配置、深度采样和反投影 |
+| [scripts](scripts) | 数据准备、训练、离线检测、导出与相机驱动准备入口 |
+| [configs](configs) | 数据集、训练、运行模型和相机配置 |
+| [ros2_ws/src](ros2_ws/src) | 消息、检测、三维定位和统一启动五个 ROS 包 |
+| [dependencies](dependencies) | 相机驱动固定版本、补丁与来源说明 |
+| [examples](examples) | 无硬件坐标计算示例和历史演示归档 |
+| [tests](tests) | 几何、配置、数据划分、推理接口与合成 ROS 测试 |
+| [weights](weights) / [data](data) | 本地模型和数据的存放约定，内容不入 Git |
 
-当前没有相机标定、三维定位或真实机械臂控制接口。模拟动作不能视为已完成硬件联调。
+## 快速开始：无相机开发
 
-项目的实际检测效果需结合数据来源、划分方式、模型权重和评估结果判断；[实验记录](docs/EXPERIMENTS.md)列出了补充结果时需要保留的信息。
+以下命令从仓库根目录执行。使用系统 Python 3.10，避免 Conda Python 与 ROS 二进制不匹配。
 
-## 数据类别
+```bash
+/usr/bin/python3 -m venv --system-site-packages .venv
+source .venv/bin/activate
+python -m pip install --upgrade 'pip<26' 'setuptools>=68,<80' wheel
+python -m pip install -e . -r requirements/laptop.txt -r requirements/dev.txt
+python -m pytest -q
+python examples/offline_localization.py
+```
 
-完整类别名称与 ID 见[标签说明](docs/DATA_AND_MODELS.md#类别映射)。其中 ID `12` 对应 `S14 Canker`，ID `14` 对应 `S12 Algal spot`，应以标签文件的数值 ID 为准，不能仅按名称中的编号重排。
+合成示例预期输出 `[0.1, 0.0, 1.0]` 米；这只验证数学计算，不代表相机精度。
 
-## 开发与反馈
+准备 `weights/yolov8n.pt` 后，使用通用物体测试：
 
-运行问题可以通过 [Issue](https://github.com/wyNomad/citrus-disease-detection/issues) 提交，附上运行入口、错误信息、依赖版本与所用配置。仓库提供运行问题和实验记录模板。
+```bash
+citrus-detect --config configs/runtime/generic.yaml --source /absolute/path/image.jpg --output runs/detect-001 --save-images
+```
 
-## 参考与许可证
+`runs/detect-001/detections.jsonl` 保存每帧检测结果，框和中心均为原图像素。程序不会自动下载缺失权重。输出目录已存在时拒绝覆盖，请为每次检测选择新目录。
 
-- [Ultralytics YOLO11](https://docs.ultralytics.com/models/yolo11/)
-- [YOLO 检测数据格式](https://docs.ultralytics.com/datasets/detect/)
+## 上游：准备数据、训练、导出
 
-仓库根目录暂未指定统一许可证；Ultralytics、数据集和预训练权重分别遵循其原有授权说明。
+```bash
+citrus-prepare-data --source data/raw/testA --output data/citrus_mini --sample 100 --seed 42
+citrus-train --config configs/training/citrus.yaml
+citrus-export --weights runs/train/citrus_experiment/weights/best.pt --format onnx
+```
 
-## 维护与协作
+数据划分默认不删除或覆盖已有输出。训练产物目录会在同名任务存在时递增，查看命令最终输出定位 `best.pt`。
+训练结束后，将目标权重复制为 `weights/citrus/best.pt`，通过 `citrus` 运行配置切换。类别 ID 的具体顺序见 [数据与模型](docs/DATA_AND_MODELS.md)。
 
-问题反馈、修改流程和检查范围见 [维护指南](CONTRIBUTING.md)。提交前可运行本地静态检查；硬件、训练或部署结果需另外记录验证环境。
+## 下游：ROS 2
+
+按 [环境安装](docs/SETUP.md) 准备依赖和驱动，然后构建：
+
+```bash
+source /opt/ros/humble/setup.bash
+source .venv/bin/activate
+python scripts/build_ros.py
+source ros2_ws/install/setup.bash
+ros2 launch citrus_bringup pipeline.launch.py profile:=generic weights_dir:="$PWD/weights"
+```
+
+业务话题：`/citrus/detections`、`/citrus/targets_3d`。光学坐标方向为 x 向右、y 向下、z 向前，单位米；无效深度的目标保留在结果中，`depth_valid=false` 且位置为 NaN。
+
+没有相机时可执行 [合成 ROS 测试](docs/VALIDATION.md)。`start_camera:=false` 用于外部数据源或 rosbag，不会生成虚拟相机数据。
+
+## 进一步阅读
+
+- [环境与相机驱动安装](docs/SETUP.md)
+- [运行与配置切换](docs/USAGE.md)
+- [数据、类别和模型管理](docs/DATA_AND_MODELS.md)
+- [训练流程](docs/TRAINING.md)
+- [架构与消息约定](docs/ARCHITECTURE.md)
+- [香橙派部署边界](docs/DEPLOYMENT.md)
+- [验证状态与待办](docs/VALIDATION.md)
+- [迁移记录](docs/MIGRATION.md) / [历史实验记录](docs/EXPERIMENTS.md)
+- [协作约定](CONTRIBUTING.md)
+
+Python 发行包名为 `citrus-vision-core`，导入名仍为 `citrus_vision`；ROS 包名保持 `citrus_vision`，两者具有独立的包管理元数据。

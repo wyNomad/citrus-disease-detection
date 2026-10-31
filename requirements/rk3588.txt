@@ -1,0 +1,3 @@
+-r core.txt
+# Install the board vendor's matched NPU driver/librknnrt and RKNN runtime separately.
+# No board-validated versions yet. This does NOT install a working NPU backend.

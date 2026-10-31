@@ -1,0 +1,62 @@
+# 验证状态
+
+本轮有意将软件检查与硬件验收分开。几何用例和合成消息不能证明相机深度精度。
+
+## 无硬件检查入口
+
+```bash
+python .github/scripts/check_repository.py
+python -m pytest -q
+python examples/offline_localization.py
+```
+
+测试覆盖深度编码、无效深度、中值、边界、光学轴向、畸变校正、配置路径、推理适配和数据划分防覆盖。
+普通 pytest 在没有构建 ROS overlay 时会跳过 `tests/ros`。要执行完整合成消息通路：
+
+```bash
+source /opt/ros/humble/setup.bash
+source .venv/bin/activate
+source ros2_ws/install/setup.bash
+ROS_LOCALHOST_ONLY=1 python -m pytest -q tests/ros
+```
+
+它使用假的模型输出和合成图像、深度、内参，通过真实 ROS 发布订阅验证双目标结果、采集时间戳、16UC1/32FC1、无效深度及标注图 Header，不使用相机或 NPU。
+有模型时另做真实 Ultralytics 离线推理检查；空白图无检出只证明加载与推理调用可用，不代表病害识别效果。
+
+旧系统 pytest 与用户目录插件冲突时，优先在项目虚拟环境安装 dev 依赖；临时诊断可设 `PYTEST_DISABLE_PLUGIN_AUTOLOAD=1` 并通过 `PYTHONPATH=src` 显式提供公共包。
+
+## 待硬件验收
+
+- Gemini 305 枚举、udev 权限、USB 带宽和稳定取流。
+- 可用分辨率、帧率、彩色画面形态，以及对齐后的深度重投影。
+- 标定内参、畸变、深度单位、时间同步、无效深度与测距误差。
+- 通用目标三维通路，再验证真实病害叶片和果实。
+- RK3588 ARM64 驱动与推理环境、NPU 适配、精度对比、延迟、帧率和长时稳定性。
+
+本轮实际运行的检查与环境见 [验证结果](VALIDATION_RESULTS.md)。未在此列为通过的能力不得按已验证部署能力描述。
+
+## 合入前的自动门槛
+
+CI 分为 core、ros 和 training-export 三个任务。核心与 ROS 任务使用 `CITRUS_FAIL_ON_SKIP=1`，任何跳过都使该任务失败。核心任务安装 OpenCV 运行畸变测试；ROS 任务在 Ubuntu 22.04 / Humble 容器内构建五个自有包并执行 ROS 专用用例。第三方驱动的固定版本获取与八包构建仍在本地检查。
+
+```bash
+CITRUS_FAIL_ON_SKIP=1 python -m pytest -q --ignore=tests/ros
+python -m build
+python .github/scripts/check_wheel.py
+```
+
+构建并加载 ROS overlay 后，再执行完整测试：
+
+```bash
+ROS_LOCALHOST_ONLY=1 CITRUS_FAIL_ON_SKIP=1 python -m pytest -q
+```
+
+wheel 检查会在仓库外创建无系统包的临时虚拟环境，联网安装 wheel 的核心依赖，并校验命令入口与元数据。
+训练/导出检查使用人工图像和随机初始化 YOLO11，不代表病害模型精度：
+
+```bash
+python -m pip install -r requirements/export.txt
+python scripts/check_training_export.py --output /tmp/citrus-training-check
+```
+
+此脚本拒绝已有输出目录；不下载数据集或预训练模型，完成一轮 CPU 训练后重新加载 best.pt，导出 ONNX 并用 CPU Runtime 验证有限数值输出。

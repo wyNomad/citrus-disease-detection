@@ -1,38 +1,24 @@
-# Python and local environments
 __pycache__/
 *.py[cod]
-*$py.class
-.venv/
-venv/
-.env
-.env.*
+*.egg-info/
 .pytest_cache/
-.ipynb_checkpoints/
-
-# Editor settings
-.idea/
-.vscode/
-
-# Datasets, generated outputs and local models
-datasets/
-runs/
-weights/
+.venv/
+/dist/
+/build/
+/ros2_ws/build/
+/ros2_ws/install/
+/ros2_ws/log/
+/ros2_ws/src/vendor/
+/runs/
+/data/**
+!/data/README.md
+/weights/**
+!/weights/README.md
 *.pt
-*.pth
 *.onnx
-*.engine
-
-# Local test media
-*.jpg
-*.jpeg
-*.png
-*.bmp
-*.mp4
-
-# Keep curated documentation assets
-!assets/
-!assets/**
-
-# OS metadata
-.DS_Store
-Thumbs.db
+*.rknn
+*.bag
+*.db3
+*.mcap
+.env
+.vscode/

@@ -1,7 +1,7 @@
 # === 数据集路径设置 ===
 # 指向我们刚才用 split_data.py 生成的那个文件夹
 # 这里的 .. 表示回退到根目录，进入 datasets
-path: ../datasets/citrus_mini
+path: ../../data/citrus_mini
 train: images/train
 val: images/val
 

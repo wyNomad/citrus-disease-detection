@@ -1,0 +1,21 @@
+# Orbbec Gemini 305 / G40351-191. Profiles remain to be confirmed on hardware.
+# 0 lets the device select its stream profile; inference size is independent.
+launch_arguments:
+  camera_name: camera
+  depth_registration: 'true'
+  align_mode: SW
+  align_target_stream: COLOR
+  enable_depth_scale: 'true'
+  enable_frame_sync: 'true'
+  enable_color: 'true'
+  enable_depth: 'true'
+  color_width: '0'
+  color_height: '0'
+  color_fps: '0'
+  depth_width: '0'
+  depth_height: '0'
+  depth_fps: '0'
+  device_preset: High Accuracy
+  enable_point_cloud: 'false'
+  enable_colored_point_cloud: 'false'
+  enable_threshold_filter: 'false'

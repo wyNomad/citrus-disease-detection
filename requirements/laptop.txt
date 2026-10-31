@@ -1,0 +1,4 @@
+-r core.txt
+ultralytics>=8.3.65,<9
+# Keep compatible with the NumPy 1.x ABI used by Ubuntu 22.04 ROS cv_bridge.
+opencv-python>=4.7,<4.12
