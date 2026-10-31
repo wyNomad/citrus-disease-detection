@@ -1,0 +1,13 @@
+model: yolo11n.pt
+data: ../datasets/citrus.yaml
+name: citrus_experiment
+exist_ok: false
+epochs: 10
+pretrained: true
+imgsz: 640
+device: cpu
+workers: 0
+batch: 4
+amp: false
+plots: true
+seed: 42

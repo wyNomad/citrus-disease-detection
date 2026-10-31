@@ -1,18 +1,26 @@
 {
   "python": [
-    ".github/scripts/check_repository.py",
-    "main.py",
-    "split_data.py",
+    ".github/scripts",
+    "src",
+    "ros2_ws/src",
     "scripts",
-    "utils"
+    "tests",
+    "examples",
+    "utils",
+    "main.py",
+    "split_data.py"
   ],
   "xml": [
-    "assets"
+    "assets",
+    "ros2_ws/src"
   ],
   "markdown": [
     "README.md",
     "docs",
     "CONTRIBUTING.md",
-    ".github/PULL_REQUEST_TEMPLATE.md"
+    ".github/PULL_REQUEST_TEMPLATE.md",
+    "dependencies",
+    "weights",
+    "data"
   ]
 }

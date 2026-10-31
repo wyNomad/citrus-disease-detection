@@ -1,45 +1,18 @@
 # 数据与模型
 
-[返回项目介绍](../README.md) · [运行指南](USAGE.md)
-
-## 仓库内外的资源
-
-| 资源 | 当前情况 |
-| --- | --- |
-| 数据处理、训练、检测源码 | 已包含 |
-| 标签类别配置 | [configs/custom_data.yaml](../configs/custom_data.yaml)，15 类 |
-| 原始图片与标注 | 未包含；原始来源、版本和样本数量尚未在仓库记录 |
-| 预训练权重 | 需另行准备 `weights/yolo11n.pt`，参考 [YOLO11 官方说明](https://docs.ultralytics.com/models/yolo11/) |
-| 柑橘检测权重 | 训练生成 `runs/train/citrus_experience/weights/best.pt`，当前未附带 |
-| 效果图与评估产物 | 当前未附带，可按[实验记录说明](EXPERIMENTS.md)补充 |
-
-数据、模型权重和训练输出默认由 `.gitignore` 排除。准备本地资源后才能运行训练与检测入口。
+大文件不进入普通 Git 历史。数据位于 `data/`，预训练及部署权重位于 `weights/`，训练输出位于 `runs/`；需要单独复制或通过受控存储获取。
 
 ## 数据格式
 
-数据采用 YOLO 检测标注：每张图片对应同名 txt 文件，每行一个目标，字段为 `class_id x_center y_center width height`；框中心与宽高归一化到 0–1，类别编号从 0 开始。详细定义见 [Ultralytics 检测数据格式](https://docs.ultralytics.com/datasets/detect/)。
+原始数据应包含 `images/<name>.jpg` 和对应 `labels/<name>.txt`。标签使用 YOLO 检测格式：`class_id cx cy width height`，坐标归一化。
+划分工具只选图片/标签配对，固定 seed 可复现，并写入 `split_manifest.json`。空标签文件可作为背景样本。
+文件重名但扩展名不同会导致标签覆盖，因此工具拒绝重复 stem。输出存在时拒绝执行，不再默认删除旧数据。
 
-`split_data.py` 当前要求图片有对应标签文件；未提供标签文件的图片会被跳过。
+数据配置为 `configs/datasets/citrus.yaml`。其中 `path` 相对该 YAML 文件；训练入口解析为绝对路径后生成运行用副本，避免 Ultralytics 全局 datasets_dir 影响位置解析。
 
-划分后的预期目录：
+## 原始 15 类映射
 
-```text
-datasets/citrus_mini/
-├── images/
-│   ├── train/
-│   └── val/
-└── labels/
-    ├── train/
-    └── val/
-```
-
-YAML 中 `path` 指向 `citrus_mini`，`train` 和 `val` 字段指向其下的图片目录。使用本机绝对路径可避免把历史相对路径当成已验证配置。
-
-## 类别映射
-
-下表保留当前配置的原始类别字符串；这些标签同时包含健康样本、病害及缺素症状，不能将它们统称为 15 种病害。
-
-| 标签 ID | 配置中的名称 |
+| ID | 名称 |
 | --- | --- |
 | 0 | S0 others |
 | 1 | S1 Healthy fruit |
@@ -57,10 +30,14 @@ YAML 中 `path` 指向 `citrus_mini`，`train` 和 `val` 字段指向其下的�
 | 13 | S13 Sooty mould |
 | 14 | S12 Algal spot |
 
-数字标签 ID 是训练匹配依据。名称前缀 S12 / S14 与 ID 顺序并不一致，不要仅根据前缀重排配置；如需调整类别，应同时转换全部标签并重新核对模型。
+保留原仓库顺序，尤其 ID 12/14 不按名称数字重新排序。推理类别名默认来自模型内元数据；更换数据集时同时管理标签与权重。
 
-## 数据与权重的后续补充
+## 权重约定
 
-补充实验材料时，记录数据来源链接、版本、授权、图片与标注数量、类别分布及训练/验证划分。发布训练权重时，附上对应代码版本、类别配置、训练参数和评估结果。
+- `weights/yolo11n.pt`：训练用预训练权重，原仓库未附带。
+- `weights/yolov8n.pt`：通用目标验证模型，可使用旧本地工程已有文件。
+- `weights/citrus/best.pt`：训练完成后选定的业务模型。
+- `weights/legacy/HLB_*.pt`：本地历史权重保留区，架构、标签和兼容性待核对，不默认加载。
 
-图片、标注、预训练权重与依赖库各自的授权说明分别适用；当前仓库不代替原始资源的分发入口。
+每个正式发布模型应附架构、类别映射、训练代码提交、数据版本、输入尺寸、验证指标、权重 SHA-256 与部署后端版本。
+`.pt`、ONNX 和 RKNN 是不同运行产物；`.pt` 扩展名不能证明模型家族和兼容性。只加载来源可信的权重。

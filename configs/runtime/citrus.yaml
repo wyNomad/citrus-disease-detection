@@ -1,0 +1,16 @@
+model:
+  path: citrus/best.pt
+  backend: ultralytics
+  device: cpu
+  confidence: 0.4
+  iou: 0.45
+  image_size: 640
+  target_classes: []
+localization:
+  depth_scale: 0.001
+  min_depth: 0.1
+  max_depth: 10.0
+  sample_radius: 2
+  sync_slop: 0.04
+  sync_queue: 30
+publish_annotated: false
