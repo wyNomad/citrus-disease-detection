@@ -45,6 +45,8 @@ class LocalizerNode(Node):
                 raise ValueError("waiting for color CameraInfo")
             if not detections.header.frame_id or detections.header.frame_id != info.header.frame_id:
                 raise ValueError("detections and color calibration must use the same optical frame")
+            if depth.header.frame_id != info.header.frame_id:
+                raise ValueError("depth must be registered to the color optical frame")
             expected = (info.width, info.height)
             if (detections.image_width, detections.image_height) != expected or (depth.width, depth.height) != expected:
                 raise ValueError("color, aligned depth and CameraInfo sizes differ; verify depth_registration")

@@ -65,3 +65,5 @@ source ros2_ws/install/setup.bash
 不要同时 source 旧工作空间和本仓库的 overlay，避免同名驱动覆盖。
 
 构建脚本使用当前 Python 解释器运行 colcon，并明确传递 CMake Python 路径，确保 ROS 节点能读取该虚拟环境的模型依赖。构建和运行均使用同一个环境；更换环境后重新构建。
+
+升级旧整合版本时，在未加载 ROS overlay 的终端执行 `.venv/bin/python -m pip uninstall citrus-vision`，再执行 `.venv/bin/python -m pip install -e .`。新的 Python 发行包使用 `citrus-vision-core`，避免与 ROS 包的归一化名称冲突。

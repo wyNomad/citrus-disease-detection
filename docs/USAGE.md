@@ -6,12 +6,12 @@
 ## 离线检测
 
 ```bash
-citrus-detect --config configs/runtime/generic.yaml --weights-dir weights --source /absolute/path/image.jpg --save-images
+citrus-detect --config configs/runtime/generic.yaml --weights-dir weights --source /absolute/path/image.jpg --output runs/detect-001 --save-images
 citrus-detect --config configs/runtime/citrus.yaml --weights-dir weights --source data/citrus_mini/images/val --output runs/citrus-detect
 ```
 
 支持单图、图片目录、视频路径和摄像头编号；只有 ROS 管线使用 Gemini 305 的对齐深度。离线检测仅输出 2D 像素，不能凭单张彩色图生成实测三维坐标。
-输出为每帧一行的 JSONL，含类别 ID/名称、置信度、原图尺寸、框和中心。可选保存标注帧。
+输出为每帧一行的 JSONL，含类别 ID/名称、置信度、原图尺寸、框和中心。可选保存标注帧。输出目录存在时拒绝执行，避免覆盖已有 JSONL 和图片；每次运行需选择新目录。
 
 ## 模型配置
 
@@ -51,3 +51,5 @@ ros2 launch citrus_bringup pipeline.launch.py start_camera:=false weights_dir:="
 
 外部数据必须满足 [几何与消息约定](ARCHITECTURE.md)，话题可在运行配置的 `topics` 中调整。
 启动时没有模型会报错退出；有模型但没有相机或外部数据时节点等待输入，不会伪造检测或位置。
+
+检测、内参和深度帧必须使用相同的彩色光学坐标系；仅尺寸相同的原始深度帧会被拒绝。业务进程异常退出时，启动命令返回非零状态；正常 Ctrl+C 停止保持正常退出。

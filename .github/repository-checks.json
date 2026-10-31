@@ -22,5 +22,10 @@
     "dependencies",
     "weights",
     "data"
+  ],
+  "yaml": [
+    "configs",
+    "dependencies/orbbec.repos",
+    ".github"
   ]
 }

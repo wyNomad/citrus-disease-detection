@@ -15,6 +15,14 @@ import yaml
 from citrus_vision.config import load_profile, resolve_model_path
 
 
+def pipeline_process_exit(event, context):
+    if context.is_shutdown:
+        return []
+    if event.returncode != 0:
+        raise RuntimeError(f"Pipeline process {event.process_name} exited with code {event.returncode}")
+    return [EmitEvent(event=Shutdown(reason="Pipeline node exited"))]
+
+
 def launch_nodes(context):
     share = Path(get_package_share_directory("citrus_bringup"))
     profile = LaunchConfiguration("profile").perform(context)
@@ -43,7 +51,7 @@ def launch_nodes(context):
                      parameters=[{"profile_file": profile_file}])
     for process in (detector, localizer):
         nodes.append(RegisterEventHandler(OnProcessExit(
-            target_action=process, on_exit=[EmitEvent(event=Shutdown(reason="Pipeline node exited"))])))
+            target_action=process, on_exit=pipeline_process_exit)))
     nodes.extend([detector, localizer])
     return nodes
 

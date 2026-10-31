@@ -7,7 +7,7 @@
 - `citrus_vision` 是普通 Python 包，既不导入 ROS，也不依赖相机驱动。离线检测和 ROS 检测节点调用同一推理接口。
 - `citrus_interfaces` 定义 2D 检测与 3D 结果，不复用 `frame_id` 存类别名。
 - `citrus_detector` 订阅图像并推理，原样保留输入 Header。深度为 1 的输入队列减少慢推理时旧帧积压，不承诺固定帧率。
-- `citrus_localizer` 按采集时间近似同步检测与深度；缓存彩色 CameraInfo，校验分辨率与坐标系。内参不必每帧参与同步，启动及标定变化后必须获取有效信息。
+- `citrus_localizer` 按采集时间近似同步检测与深度；缓存彩色 CameraInfo，校验检测、深度和内参的分辨率与坐标系。内参不必每帧参与同步，启动及标定变化后必须获取有效信息。
 - `citrus_bringup` 组合相机、检测、定位；模型缺失时先报错，业务节点退出时关闭整个启动链。
 
 公共检测结果为 `Detection(class_id, class_name, confidence, xyxy)`，中心点由原始图像框计算。推理后端负责撤销缩放和 letterbox，定位层不关心模型家族。
@@ -37,3 +37,5 @@
 结果代表中心邻域可见表面位置，不等于物体几何中心或可直接执行的抓取点。叶片边缘、背景混入和遮挡需要后续实测评估。
 
 同步窗口默认 0.04 秒、缓存 30 帧，可在运行配置调整。它约束采集时间差，不能消除运动误差；推理延迟超过缓存保留时间会导致匹配失败。
+
+Python 发行包 `citrus-vision-core` 与 ROS 包 `citrus_vision` 分别提供包元数据，共用导入模块 `citrus_vision`。ROS overlay 不应覆盖公共发行包的 extras 或 CLI 元数据。启动器对异常子进程退出返回失败状态，正常关闭期间不把收到的退出信号重复解释为启动故障。

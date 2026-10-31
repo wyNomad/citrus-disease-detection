@@ -43,10 +43,10 @@ python examples/offline_localization.py
 准备 `weights/yolov8n.pt` 后，使用通用物体测试：
 
 ```bash
-citrus-detect --config configs/runtime/generic.yaml --source /absolute/path/image.jpg --save-images
+citrus-detect --config configs/runtime/generic.yaml --source /absolute/path/image.jpg --output runs/detect-001 --save-images
 ```
 
-`runs/detect/detections.jsonl` 保存每帧检测结果，框和中心均为原图像素。程序不会自动下载缺失权重。
+`runs/detect-001/detections.jsonl` 保存每帧检测结果，框和中心均为原图像素。程序不会自动下载缺失权重。输出目录已存在时拒绝覆盖，请为每次检测选择新目录。
 
 ## 上游：准备数据、训练、导出
 
@@ -86,3 +86,5 @@ ros2 launch citrus_bringup pipeline.launch.py profile:=generic weights_dir:="$PW
 - [验证状态与待办](docs/VALIDATION.md)
 - [迁移记录](docs/MIGRATION.md) / [历史实验记录](docs/EXPERIMENTS.md)
 - [协作约定](CONTRIBUTING.md)
+
+Python 发行包名为 `citrus-vision-core`，导入名仍为 `citrus_vision`；ROS 包名保持 `citrus_vision`，两者具有独立的包管理元数据。

@@ -34,3 +34,29 @@ ROS_LOCALHOST_ONLY=1 python -m pytest -q tests/ros
 - RK3588 ARM64 驱动与推理环境、NPU 适配、精度对比、延迟、帧率和长时稳定性。
 
 本轮实际运行的检查与环境见 [验证结果](VALIDATION_RESULTS.md)。未在此列为通过的能力不得按已验证部署能力描述。
+
+## 合入前的自动门槛
+
+CI 分为 core、ros 和 training-export 三个任务。核心与 ROS 任务使用 `CITRUS_FAIL_ON_SKIP=1`，任何跳过都使该任务失败。核心任务安装 OpenCV 运行畸变测试；ROS 任务在 Ubuntu 22.04 / Humble 容器内构建五个自有包并执行 ROS 专用用例。第三方驱动的固定版本获取与八包构建仍在本地检查。
+
+```bash
+CITRUS_FAIL_ON_SKIP=1 python -m pytest -q --ignore=tests/ros
+python -m build
+python .github/scripts/check_wheel.py
+```
+
+构建并加载 ROS overlay 后，再执行完整测试：
+
+```bash
+ROS_LOCALHOST_ONLY=1 CITRUS_FAIL_ON_SKIP=1 python -m pytest -q
+```
+
+wheel 检查会在仓库外创建无系统包的临时虚拟环境，联网安装 wheel 的核心依赖，并校验命令入口与元数据。
+训练/导出检查使用人工图像和随机初始化 YOLO11，不代表病害模型精度：
+
+```bash
+python -m pip install -r requirements/export.txt
+python scripts/check_training_export.py --output /tmp/citrus-training-check
+```
+
+此脚本拒绝已有输出目录；不下载数据集或预训练模型，完成一轮 CPU 训练后重新加载 best.pt，导出 ONNX 并用 CPU Runtime 验证有限数值输出。

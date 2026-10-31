@@ -4,6 +4,7 @@ import argparse
 from dataclasses import asdict
 import json
 from pathlib import Path
+import tempfile
 
 import yaml
 
@@ -19,12 +20,24 @@ def detect_main():
     parser.add_argument("--output", type=Path, default=Path("runs/detect"))
     parser.add_argument("--save-images", action="store_true")
     args = parser.parse_args()
+    if args.output.exists():
+        raise FileExistsError(f"Output already exists: {args.output}; choose a new --output directory")
+    source = Path(args.source)
+    extensions = {".jpg", ".jpeg", ".png", ".bmp"}
+    images = None
+    if source.is_dir():
+        images = sorted(p for p in source.iterdir() if p.is_file() and p.suffix.lower() in extensions)
+        if not images:
+            raise ValueError(f"No images in {source}")
+    elif source.suffix.lower() in extensions:
+        if not source.is_file():
+            raise FileNotFoundError(f"Image not found: {source}")
+        images = [source]
     profile = load_profile(args.config)
     detector = create_detector(profile.model, args.weights_dir)
     import cv2
 
-    source = Path(args.source)
-    args.output.mkdir(parents=True, exist_ok=True)
+    args.output.mkdir(parents=True, exist_ok=False)
     counter = 0
 
     def process(frame, name):
@@ -46,12 +59,7 @@ def detect_main():
         counter += 1
 
     with (args.output / "detections.jsonl").open("w", encoding="utf-8") as stream:
-        if source.is_dir() or source.suffix.lower() in {".jpg", ".jpeg", ".png", ".bmp"}:
-            images = sorted(p for p in source.iterdir() if p.suffix.lower() in {
-                ".jpg", ".jpeg", ".png", ".bmp"
-            }) if source.is_dir() else [source]
-            if not images:
-                raise ValueError(f"No images in {source}")
+        if images is not None:
             for image in images:
                 frame = cv2.imread(str(image))
                 if frame is None:
@@ -93,19 +101,23 @@ def train_main():
         if not (Path(data["path"]) / data[split]).is_dir():
             raise FileNotFoundError(f"Missing dataset {split}: {data['path']}/{data[split]}")
     args.project.mkdir(parents=True, exist_ok=True)
-    resolved = args.project.resolve() / "dataset.resolved.yaml"
+    snapshots = args.project.resolve() / "configs"
+    snapshots.mkdir(exist_ok=True)
+    snapshot = Path(tempfile.mkdtemp(prefix="train-", dir=snapshots))
+    resolved = snapshot / "dataset.yaml"
     resolved.write_text(yaml.safe_dump(data, allow_unicode=True, sort_keys=False))
     for key in ("epochs", "device"):
         if getattr(args, key) is not None:
             settings[key] = getattr(args, key)
+    metadata = {"model": str(weights.resolve()), "data": str(data_file),
+                "resolved_data": str(resolved), "parameters": settings}
+    (snapshot / "training.yaml").write_text(yaml.safe_dump(metadata, allow_unicode=True, sort_keys=False))
     from ultralytics import YOLO
 
     model = YOLO(str(weights.resolve()), task="detect")
     model.train(data=str(resolved), project=str(args.project.resolve()), **settings)
     save_dir = Path(model.trainer.save_dir)
-    (save_dir / "training_config.yaml").write_text(yaml.safe_dump({
-        "model": str(weights.resolve()), "data": str(data_file), **settings
-    }, allow_unicode=True, sort_keys=False))
+    (save_dir / "training_config.yaml").write_text(yaml.safe_dump(metadata, allow_unicode=True, sort_keys=False))
     print(f"Best checkpoint (if saved by trainer): {save_dir / 'weights/best.pt'}")
 
 
@@ -119,7 +131,7 @@ def export_main():
         raise FileNotFoundError(args.weights)
     from ultralytics import YOLO
 
-    options = {"format": args.format, "imgsz": args.imgsz}
+    options = {"format": args.format, "imgsz": args.imgsz, "simplify": False}
     if args.format == "rknn":
         options["name"] = "rk3588"
     print(YOLO(str(args.weights.resolve()), task="detect").export(**options))

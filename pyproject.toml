@@ -3,7 +3,7 @@ requires = ["setuptools>=68,<80", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "citrus-vision"
+name = "citrus-vision-core"
 version = "0.1.0"
 description = "Citrus detection and RGB-D localization shared core"
 requires-python = ">=3.10"
@@ -13,6 +13,7 @@ dependencies = ["numpy>=1.23,<2", "PyYAML>=6,<7"]
 inference = ["ultralytics>=8.3.65,<9", "opencv-python>=4.7,<4.12"]
 train = ["ultralytics>=8.3.65,<9", "opencv-python>=4.7,<4.12"]
 dev = ["pytest>=7,<9", "build>=1,<2"]
+export = ["ultralytics>=8.3.65,<9", "opencv-python>=4.7,<4.12", "onnx>=1.16,<1.19", "onnxruntime>=1.18,<2"]
 
 [project.scripts]
 citrus-detect = "citrus_vision.cli:detect_main"
