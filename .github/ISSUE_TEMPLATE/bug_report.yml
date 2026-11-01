@@ -10,6 +10,7 @@ body:
       options:
         - 数据准备 / citrus-prepare-data
         - 模型训练 / citrus-train
+        - 独立评估 / citrus-val
         - 模型导出 / citrus-export
         - 离线检测 / citrus-detect
         - Gemini 305 驱动与取流

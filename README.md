@@ -22,13 +22,13 @@
 
 本项目以 `depth_estimation` 的**相机采集 → 目标检测 → 三维定位**为主线：调用 **Orbbec Gemini 305（G40351-191）** 与选定模型，输出目标类别、像素位置和相机光学坐标系下的三维坐标。
 
-YOLO 数据准备、训练和导出作为上游工具，为这条视觉通路提供模型。日常物体与柑橘病害通过运行配置切换，共用检测和定位实现。
+上游提供 YOLO 数据准备、训练调参、独立评估、离线检测和模型导出，为这条视觉通路提供经选择的模型。日常物体与柑橘病害通过运行配置切换，共用检测和定位实现。
 
 开发环境为 **Ubuntu 22.04 / Python 3.10 / ROS 2 Humble**，目标设备为 **香橙派 5 Plus / RK3588 / Ubuntu 22.04 ARM64**。
 
 | 能力 | 当前状态 |
 | --- | --- |
-| 数据准备、训练、离线检测、ONNX 导出 | 软件通路已验证 |
+| 数据准备、训练调参、独立评估、离线检测、ONNX 导出 | 软件通路已验证 |
 | ROS 多目标检测与相机坐标系三维定位 | 合成通路与输入保护已验证 |
 | Gemini 305 实际取流、对齐与测距 | 待相机实测 |
 | 真实柑橘病害模型效果 | 待真实数据训练与评估 |
@@ -45,7 +45,7 @@ flowchart LR
     B --> L[三维定位]
     Z[对齐深度与彩色内参] --> L
     L --> P[相机光学坐标 · 米]
-    D[图片与 YOLO 标签] --> T[上游训练与导出]
+    D[图片与 YOLO 标签] --> T[训练调参与独立评估]
     T --> W[选定模型]
     W --> I
 ```
@@ -121,15 +121,19 @@ ros2 launch citrus_bringup pipeline.launch.py profile:=generic weights_dir:="$PW
 
 ```bash
 citrus-prepare-data --source data/raw/testA --output data/citrus_mini --sample 100 --seed 42
-citrus-train --config configs/training/citrus.yaml
+citrus-train --config configs/training/citrus.yaml --epochs 50 --batch 4 --imgsz 640 --device cpu
 ```
 
 数据划分使用固定 seed，并拒绝已有输出目录。训练为每次任务保存独立数据配置快照，同名训练目录存在时自动递增。
 
 ```bash
+citrus-val --weights runs/train/citrus_experiment/weights/best.pt --data configs/datasets/citrus.yaml --output runs/val/citrus-001
+citrus-detect --config configs/runtime/citrus.yaml --model "$PWD/runs/train/citrus_experiment/weights/best.pt" --source data/citrus_mini/images/val --conf 0.3 --output runs/detect/citrus-001 --save-images
 python -m pip install -r requirements/export.txt
 citrus-export --weights runs/train/citrus_experiment/weights/best.pt --format onnx
 ```
+
+常用参数可由命令行覆盖，高级 YOLO 参数写入训练 YAML。评估保存指标与模型 SHA-256；导出同时生成模型说明 JSON。完整步骤见 [模型开发指南](docs/TRAINING.md)。
 
 实际训练目录以命令输出为准。选定的业务模型放到 `weights/citrus/best.pt`，或者调整运行配置的模型位置。15 类标签顺序与权重管理约定见 [数据与模型](docs/DATA_AND_MODELS.md)。
 
@@ -138,7 +142,7 @@ citrus-export --weights runs/train/citrus_experiment/weights/best.pt --format on
 | 位置 | 职责 |
 | --- | --- |
 | [`src/citrus_vision`](src/citrus_vision) | 共用检测接口、配置、数据处理与几何计算 |
-| [`scripts`](scripts) | 数据、训练、检测、导出、构建及验证入口 |
+| [`scripts`](scripts) | 数据、训练、评估、检测、导出、构建及验证入口 |
 | [`configs`](configs) | 数据集、训练、运行模式和相机参数 |
 | [`ros2_ws/src`](ros2_ws/src) | 五个自有 ROS 包，以及本地准备的相机依赖 |
 | [`dependencies`](dependencies) | 驱动固定提交、补丁与来源 |
@@ -151,7 +155,7 @@ citrus-export --weights runs/train/citrus_experiment/weights/best.pt --format on
 
 ## 验证与协作
 
-最近的软件验收：**49 项测试零跳过、8 个 ROS 包本地构建通过**，并完成干净环境 wheel 安装、实际 CPU 训练、模型重载、ONNX 导出及数值一致性检查。
+最近的软件验收：**58 项测试零跳过、8 个 ROS 包本地构建通过**，并完成干净环境 wheel 安装、实际 CPU 训练、独立评估、离线检测、ONNX 导出及数值一致性检查。
 
 GitHub Actions 分为 `core`、`ros`、`training-export` 三个任务，必需测试禁止跳过后报告成功。版本组合、测试边界和硬件待办见 [验证结果](docs/VALIDATION_RESULTS.md)。
 

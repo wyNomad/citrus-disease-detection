@@ -25,10 +25,13 @@ def main():
                         "from citrus_vision.cli import detect_main; "
                         "d=distribution('citrus-vision-core'); "
                         "assert 'inference' in d.metadata.get_all('Provides-Extra'); "
-                        "assert len(d.entry_points)==4; print('Installed core wheel metadata and imports passed')"],
+                        "assert {e.name for e in d.entry_points} == "
+                        "{'citrus-prepare-data','citrus-train','citrus-val','citrus-detect','citrus-export'}; "
+                        "print('Installed core wheel metadata and imports passed')"],
                        cwd=directory, env=environment, check=True)
-        subprocess.run([str(directory / "venv/bin/citrus-detect"), "--help"],
-                       cwd=directory, env=environment, check=True)
+        for command in ("citrus-prepare-data", "citrus-train", "citrus-val", "citrus-detect", "citrus-export"):
+            subprocess.run([str(directory / "venv/bin" / command), "--help"],
+                           cwd=directory, env=environment, check=True)
 
 
 if __name__ == "__main__":

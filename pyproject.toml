@@ -18,6 +18,7 @@ export = ["ultralytics>=8.3.65,<9", "opencv-python>=4.7,<4.12", "onnx>=1.16,<1.1
 [project.scripts]
 citrus-detect = "citrus_vision.cli:detect_main"
 citrus-train = "citrus_vision.cli:train_main"
+citrus-val = "citrus_vision.cli:val_main"
 citrus-prepare-data = "citrus_vision.dataset:main"
 citrus-export = "citrus_vision.cli:export_main"
 

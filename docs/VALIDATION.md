@@ -52,11 +52,11 @@ ROS_LOCALHOST_ONLY=1 CITRUS_FAIL_ON_SKIP=1 python -m pytest -q
 ```
 
 wheel 检查会在仓库外创建无系统包的临时虚拟环境，联网安装 wheel 的核心依赖，并校验命令入口与元数据。
-训练/导出检查使用人工图像和随机初始化 YOLO11，不代表病害模型精度：
+上游流程检查使用人工图像和随机初始化 YOLO11，不代表病害模型精度：
 
 ```bash
 python -m pip install -r requirements/export.txt
 python scripts/check_training_export.py --output /tmp/citrus-training-check
 ```
 
-此脚本拒绝已有输出目录；不下载数据集或预训练模型，完成一轮 CPU 训练后重新加载 best.pt，导出 ONNX 并用 CPU Runtime 验证有限数值输出。
+此脚本拒绝已有输出目录；不下载数据集或预训练模型，完成一轮 CPU 训练后重载 best.pt，执行独立评估与离线检测，检查指标及 JSONL，再导出 ONNX 和模型说明文件；用 ONNX checker、CPU Runtime 和公共检测接口检查加载与有限数值输出，并比较 PyTorch / ONNX 原始输出。
