@@ -22,7 +22,7 @@ citrus-detect --config configs/runtime/citrus.yaml --weights-dir weights --sourc
 
 `target_classes: []` 表示不过滤。可填模型内的完整类别名，如 `[bottle]`；名称不存在时启动报错，避免切换模型后静默无结果。
 `device`、置信度、IoU、输入尺寸和 `publish_annotated` 均可配置。
-训练类别顺序保持原 GitHub 配置，不能把旧 HLB 权重默认为相同标签或相同模型结构。
+训练类别顺序与 `configs/datasets/citrus.yaml` 一致。来自原 depth_estimation 的 HLB 权重保留在本地，启用前需要核对模型结构与标签映射。
 
 ## 相机管线
 

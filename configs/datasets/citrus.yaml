@@ -1,12 +1,10 @@
-# === 数据集路径设置 ===
-# 指向我们刚才用 split_data.py 生成的那个文件夹
-# 这里的 .. 表示回退到根目录，进入 datasets
+# 数据集路径相对本 YAML 文件；由 citrus-prepare-data 准备目录。
+# 训练入口将其解析为绝对路径后保存到本次实验快照。
 path: ../../data/citrus_mini
 train: images/train
 val: images/val
 
-# === 类别名称 (从你的 JSON 翻译过来的) ===
-# 必须和 JSON 里的 ID 一一对应
+# 类别 ID 与标签、训练权重保持一致，不能按名称中的编号重排。
 names:
   0: S0 others
   1: S1 Healthy fruit
@@ -20,6 +18,6 @@ names:
   9: S9 Boron deficiency
   10: S10 Anthracnose
   11: S11 Citrus greasy spot
-  12: S14 Canker       # 注意：你的 JSON 里 ID 12 对应的是 S14
-  13: S13 Sooty mould  # ID 13 对应 S13
-  14: S12 Algal spot   # ID 14 对应 S12
+  12: S14 Canker       # 标签 ID 12 对应 S14
+  13: S13 Sooty mould  # 标签 ID 13 对应 S13
+  14: S12 Algal spot   # 标签 ID 14 对应 S12

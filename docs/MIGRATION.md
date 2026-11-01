@@ -1,52 +1,55 @@
-# 仓库整合记录
+# 工程来源与演进
 
-## 来源与边界
+## 主线与上游能力
 
-- 主仓库：`wyNomad/citrus-disease-detection`，整合起点 `227d04dff462317130be1dd6c90eeae5817e43a9`。
-- 本地 `depth_estimation`：YOLO ROS 节点、深度定位、统一启动、历史权重和总结。
-- 本地 `orbbec_305`：独立参考工程，保留原目录；收录资料摘要和必要相机参数，不迁入 SLAM、KCF、MediaPipe 等无关包。
-- 硬件：Gemini 305 / G40351-191。最终运行目标为香橙派 5 Plus / RK3588。
+当前工程以本地 `depth_estimation` 的相机检测和三维定位为主线，主仓库为 `wyNomad/citrus-disease-detection`。
+YOLO 数据准备、训练与导出融入上游工具，为视觉主线提供可配置的模型。
+Gemini 305 / G40351-191 为目标相机，香橙派 5 Plus / RK3588 为最终运行平台。
 
-原工作空间在目录之外完整归档，并逐普通文件核对 SHA-256。备份包含源码、权重、日志、构建产物和工作流资料，平台保护的元数据目录不在项目备份内。
-本机备份路径：`/home/wyi/depth_estimation_backup_20261031`。这只是迁移记录，运行代码不依赖此路径。
-
-## 对照
-
-| 原入口 | 新位置 |
+| depth_estimation 模块 | 当前实现 |
 | --- | --- |
-| `scripts/train.py` | 同名兼容入口 → 公共包训练 CLI |
-| `scripts/detect.py` | 同名兼容入口 → 公共推理模块 |
-| `split_data.py` | 兼容入口；新增显式参数、固定 seed、拒绝覆盖 |
-| `configs/custom_data.yaml` | `configs/datasets/citrus.yaml`，保留 15 类顺序 |
-| `utils/arm_vision.py` | 兼容像素接口，调用公共推理模块 |
-| 原 `main.py` 模拟抓取 | `examples/legacy_grasp` 历史归档；根 main 改为离线检测入口 |
-| `vision_yolo_detector` | `citrus_detector` + 公共 `citrus_vision` |
-| `vision_target_locator` | `citrus_localizer` + 公共几何函数 |
-| `vision_bringup` | `citrus_bringup`，配置与路径可传入 |
-| `yahboomcar_msgs` | 替换为职责明确的 `citrus_interfaces`，旧消费者需适配 |
+| `vision_yolo_detector` | `citrus_detector` 与公共 `citrus_vision.inference` |
+| `vision_target_locator` | `citrus_localizer` 与公共 `citrus_vision.geometry` |
+| `vision_bringup` | `citrus_bringup/launch/pipeline.launch.py` |
+| `yahboomcar_msgs` 检测消息 | 专用 `citrus_interfaces`，分开存放类别与坐标系 |
+| 本地权重 | 本地 `weights/`，模型文件不进入 Git |
 
-## 行为变化
+`orbbec_305` 保留为独立参考工程；主仓库仅使用必要相机资料、配置和固定版本驱动，不引入 SLAM、KCF、MediaPipe 等独立应用。
 
-输出从首目标扩展为本帧全部目标；类别与 frame_id 分开；Header 保留原始采集时间；检测与深度按采集时间匹配。
-无效深度有明确状态和 NaN 坐标。支持整数深度比例换算与浮点米制深度，校验尺寸和内参，并考虑非零畸变。
-旧 PointStamped 与 RViz Marker 话题不再作为主接口，新的数组包含类别与多目标信息。需要旧接口时后续可加桥接节点。
+## 入口整理
 
-相机驱动基于官方 v2.7.6 固定提交；原两处点云 row_step 修复保留为补丁。
-旧本地启动参数包括深度对齐、High Accuracy、阈值过滤最大 1500。新相机配置显式启用对齐和 High Accuracy，默认关闭额外阈值过滤，避免隐式限制到 1.5 米。
-旧工程写死 640×480 未经本轮实机验证，新配置使用设备自动 profile，实际分辨率可配置。
+正式系统入口为 `citrus_bringup` 的统一 launch；上游和离线检查使用 `scripts/` 或 `citrus-*` 命令。
+原训练项目的模拟抓取演示、像素抓取适配和重复根目录入口已移除。历史实现可以通过 Git 历史追溯，工作树只保留当前维护的功能。
+依赖统一由 `pyproject.toml` 和 `requirements/` 环境清单管理。
 
-## 保留资料
+## 检测定位契约
 
-- [原深度工程总结](history/depth_estimation_20260907.md)
+结果从首目标扩展为整帧全部目标；类别与 frame_id 分开；Header 保留彩色图采集时间，并与深度按采集时间匹配。
+检测、深度和内参必须属于匹配的彩色光学坐标系，尺寸一致。无效深度保留明确状态和 NaN 坐标；几何计算支持整数深度换算、浮点米制深度和已支持的非零畸变。
+主接口为包含检测信息的三维目标数组，手眼标定和机械臂控制属于后续工作。
+
+驱动固定到官方 OrbbecSDK_ROS2 v2.7.6 提交，并应用两处点云 row_step 修复。
+相机配置显式开启 COLOR 深度对齐与 High Accuracy，默认关闭额外的 1.5 米阈值过滤。
+原 depth_estimation 的 640×480 流设置尚未经本轮实机确认，当前使用设备自动 profile，具体参数需实测确定。
+
+## 软件验收与边界
+
+Python 公共发行包为 `citrus-vision-core`，Python 导入名和 ROS 包名为 `citrus_vision`，分别管理元数据。
+检测输出拒绝覆盖已有目录；训练使用独立配置快照；启动器向外保留业务进程异常退出状态。
+软件验证包括核心与 ROS 回归、干净 wheel 安装、合成数据实际训练、ONNX 导出与一致性检查，详见 [验证结果](VALIDATION_RESULTS.md)。
+真实病害模型效果、相机取流/定位精度、ARM64 与 RKNN 后端待后续验收。
+
+## 参考记录与备份
+
+- [原 depth_estimation 总结](history/depth_estimation_20260907.md)
 - [相机参考工程总结](history/orbbec_305_summary_20260905.md)
 - [相机画面问题交接](history/orbbec_305_handoff_20260905.md)
 
-这些是历史记录，其中路径、已完成状态和旧结论不作为新仓库验证结果。相机 color 画面先直看原始话题，不能盲目执行历史左右拼接操作。
-旧 HLB 模型仅保留本地，未假设其兼容 YOLO11。
-仓库整体尚未选定许可证；本次未替作者新增授权协议。第三方驱动按原许可证单独获取，历史自有节点的原包元数据声明 MIT。
+这些历史记录中的路径和验证结论只用于追溯；实际运行以当前配置和实测为准。
+相机原始画面需要先直看话题，不能套用历史左右拼接处理。
 
-## 2026-11-01 审查修复
+原 depth_estimation 工作空间已归档并逐普通文件核对 SHA-256。
+本机 `/home/wyi/depth_estimation_backup_20261031` 目前保留压缩包、校验清单和说明文件，重复原目录树已清理；当前运行不依赖备份路径。
+原 depth_estimation 的 HLB 权重保留在本地，启用前需要核对模型结构和标签。
 
-公共 Python 发行名称调整为 `citrus-vision-core`，导入路径仍为 `citrus_vision`，ROS 包名不变。旧环境按安装文档卸载原 Python 发行包后重新安装。
-定位必须校验深度帧的彩色光学坐标系；检测输出拒绝覆盖已有目录；每次训练使用独立数据配置快照。启动器保留异常退出状态。
-新增负向回归、干净 wheel 安装、训练导出检查及分开的 CI 任务，详见验证文档。
+仓库整体尚未选定许可证。第三方驱动保留原许可证与 NOTICE；历史 depth_estimation 节点的原包元数据声明 MIT。

@@ -5,10 +5,7 @@
     "ros2_ws/src",
     "scripts",
     "tests",
-    "examples",
-    "utils",
-    "main.py",
-    "split_data.py"
+    "examples"
   ],
   "xml": [
     "assets",

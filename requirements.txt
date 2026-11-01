@@ -1,2 +1,0 @@
-# Laptop inference; training and board deployment have separate requirements.
--r requirements/laptop.txt
