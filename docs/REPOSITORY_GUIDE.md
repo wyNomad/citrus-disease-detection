@@ -351,7 +351,7 @@ ros2 launch citrus_bringup pipeline.launch.py profile:=generic weights_dir:="$PW
 3. `training-export`：运行合成 YOLO11 CPU 训练、独立评估、离线检测、ONNX 导出与 PyTorch/ONNX 一致性检查。
 
 必需测试通过 `CITRUS_FAIL_ON_SKIP=1` 禁止跳过后报告成功。完整本地测试需先构建并加载 ROS overlay。
-最近的软件验收为 58 项测试零跳过、八包本地构建通过；详情与版本见 [VALIDATION_RESULTS.md](VALIDATION_RESULTS.md)。
+最近的软件验收为 61 项测试零跳过、八包本地构建通过；详情与版本见 [VALIDATION_RESULTS.md](VALIDATION_RESULTS.md)。
 
 ## 13. 文档与日常修改导航
 

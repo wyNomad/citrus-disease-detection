@@ -32,6 +32,8 @@ def prepare_dataset(source: Path, output: Path, sample: int = 100,
         raise ValueError("at least two image/label pairs are required")
     split = max(1, min(len(pairs)-1, int(len(pairs) * train_ratio)))
     manifest = {"seed": seed, "source": str(source), "train": [], "val": []}
+    # Claim the root exclusively before copying; a concurrent run must fail here.
+    output.mkdir(parents=True, exist_ok=False)
     for name, selected in (("train", pairs[:split]), ("val", pairs[split:])):
         for kind in ("images", "labels"):
             (output / kind / name).mkdir(parents=True, exist_ok=True)

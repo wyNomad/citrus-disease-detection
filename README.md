@@ -155,9 +155,10 @@ citrus-export --weights runs/train/citrus_experiment/weights/best.pt --format on
 
 ## 验证与协作
 
-最近的软件验收：**58 项测试零跳过、8 个 ROS 包本地构建通过**，并完成干净环境 wheel 安装、实际 CPU 训练、独立评估、离线检测、ONNX 导出及数值一致性检查。
+最近的软件验收：**61 项测试零跳过、8 个 ROS 包本地构建通过**，并完成干净环境 wheel 安装、实际 CPU 训练、独立评估、离线检测、ONNX 导出及数值一致性检查。
 
 GitHub Actions 分为 `core`、`ros`、`training-export` 三个任务，必需测试禁止跳过后报告成功。版本组合、测试边界和硬件待办见 [验证结果](docs/VALIDATION_RESULTS.md)。
+本轮结构、冲突、冗余和缺陷检查见 [开发基线审查记录](docs/BASELINE_REVIEW.md)。
 
 | 阅读目的 | 文档 |
 | --- | --- |

@@ -40,3 +40,19 @@ def test_overlapping_paths_are_rejected(tmp_path):
     make_source(tmp_path / "source")
     with pytest.raises(ValueError, match="overlap"):
         prepare_dataset(tmp_path / "source", tmp_path / "source/output")
+
+
+def test_competing_output_created_after_initial_check_is_not_overwritten(tmp_path, monkeypatch):
+    source, output = tmp_path / "source", tmp_path / "output"
+    make_source(source)
+    marker = output / "images/train/0.jpg"
+
+    def competing_task(self, pairs):
+        marker.parent.mkdir(parents=True)
+        marker.write_bytes(b"another experiment")
+
+    monkeypatch.setattr("citrus_vision.dataset.random.Random.shuffle", competing_task)
+    with pytest.raises(FileExistsError):
+        prepare_dataset(source, output, sample=0)
+    assert marker.read_bytes() == b"another experiment"
+    assert not (output / "split_manifest.json").exists()

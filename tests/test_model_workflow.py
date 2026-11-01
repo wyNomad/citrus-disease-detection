@@ -27,10 +27,13 @@ def test_evaluation_saves_metrics_config_and_correct_split_without_training_data
     calls = []
 
     class FakeModel:
-        names = {0: "leaf"}
-
         def __init__(self, *args, **kwargs):
-            pass
+            self.overrides = {"device": "0"}
+
+        @property
+        def names(self):
+            assert self.overrides["device"] == "cpu"
+            return {0: "leaf"}
 
         def val(self, **kwargs):
             calls.append(kwargs)
@@ -53,7 +56,7 @@ def test_evaluation_saves_metrics_config_and_correct_split_without_training_data
 def test_evaluation_rejects_wrong_model_labels_before_creating_output(tmp_path, monkeypatch):
     data, weights = dataset(tmp_path)
     output = tmp_path / "result"
-    fake = SimpleNamespace(names={0: "person"})
+    fake = SimpleNamespace(names={0: "person"}, overrides={})
     monkeypatch.setitem(sys.modules, "ultralytics", SimpleNamespace(YOLO=lambda *args, **kwargs: fake))
     monkeypatch.setattr(sys, "argv", ["val", "--weights", str(weights), "--data", str(data),
                                     "--output", str(output)])
