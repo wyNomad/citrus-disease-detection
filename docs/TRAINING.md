@@ -1,6 +1,7 @@
 # 训练与导出
 
-本阶段收录并重构原训练框架，未附带真实数据，也未重新训练病害模型。
+数据准备、YOLO 训练与模型导出是相机检测定位工程的上游工具。通过训练得到的权重由运行配置交给同一套检测与定位通路使用。
+仓库提供训练流程与 15 类标签配置，真实病害数据与业务模型效果需另行准备和评估。
 
 ```bash
 python -m pip install -e . -r requirements/train.txt
@@ -24,4 +25,4 @@ citrus-export --weights /absolute/path/best.pt --format onnx
 ```
 
 ONNX 导出前执行 `python -m pip install -r requirements/export.txt`。为保持 NumPy 1.x 兼容，ONNX 固定在 `>=1.16,<1.19` 范围，默认关闭额外的模型简化。RKNN 导出入口提供 `--format rknn` 并指定 RK3588 目标，但工具链、量化与板端后处理尚未验证，见 [部署说明](DEPLOYMENT.md)。
-不会为了仓库迁移启动长时间训练或自动下载模型。
+训练权重与数据需要提前准备；训练入口不会自动下载缺失的初始化权重。

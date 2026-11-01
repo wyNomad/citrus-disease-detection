@@ -2,7 +2,8 @@
 
 本说明对应当前主分支 `master`。主工程位于本地 `depth_estimation/citrus-disease-detection`，远端仓库为 `wyNomad/citrus-disease-detection`。
 
-工程连接两条流程：上游准备数据、训练并导出模型；下游调用 Gemini 305 与选定模型，输出目标类别、像素位置和相机光学坐标系下的三维位置。
+工程以 depth_estimation 的 Gemini 305 图像检测与三维定位为主线：采集彩色图、调用模型、结合对齐深度和内参，输出相机光学坐标系下的目标位置。
+数据准备、YOLO 训练和导出是为主线提供模型的上游工具，统一使用 scripts/ 或 citrus-* 入口。
 
 开发环境为 Ubuntu 22.04、Python 3.10、ROS 2 Humble；目标设备为香橙派 5 Plus、RK3588、Ubuntu 22.04 ARM64。
 当前已完成软件整合与软件通路验证。真实相机、真实病害效果、板端环境及 NPU 后端仍待后续工作。
@@ -17,7 +18,6 @@ citrus-disease-detection/
 ├── AGENTS.md                         # 面向 Agent 的项目约定
 ├── CONTRIBUTING.md                   # 协作与修改校验要求
 ├── pyproject.toml                    # Python 包、依赖、CLI、pytest 设置
-├── requirements.txt                  # 笔记本推理依赖的兼容入口
 ├── .gitignore                        # 本地产物和大文件忽略规则
 │
 ├── src/citrus_vision/                # 公共算法与命令实现
@@ -79,15 +79,11 @@ citrus-disease-detection/
 ├── tests/                            # 核心算法、配置与 CLI 回归
 │   └── ros/                          # ROS 传输、输入保护、退出状态回归
 ├── examples/
-│   ├── offline_localization.py       # 无硬件的几何计算示例
-│   └── legacy_grasp/                 # 原模拟抓取与数据划分代码归档
+│   └── offline_localization.py       # 无硬件的几何计算示例
 ├── docs/                             # 安装、架构、部署、迁移和验证文档
 │   └── history/                      # 旧工作空间总结与相机调查记录
 ├── .github/                          # CI、检查脚本、Issue/PR 模板
-├── assets/                           # 仓库展示素材
-├── main.py                           # 离线检测的兼容入口
-├── split_data.py                     # 数据划分的兼容入口
-└── utils/arm_vision.py               # 旧像素坐标 API 的兼容适配
+└── assets/                           # 仓库展示素材
 ```
 
 ## 2. 分层关系
@@ -95,11 +91,11 @@ citrus-disease-detection/
 公共算法集中在 [src/citrus_vision](../src/citrus_vision)。离线工具与 ROS 检测节点都调用这份实现。
 
 ```text
-scripts / citrus-* 命令 ──→ 公共 Python 核心
-                                   ↑
-Gemini 305 驱动 ──→ ROS 适配节点 ────┘
-                       ↓
-              ROS 检测和三维位置消息
+Gemini 305 采集 → ROS 检测节点 → 公共推理 → 检测消息
+                                              ↓
+对齐深度与内参 → ROS 定位节点 → 公共几何计算 → 三维目标消息
+
+数据准备 → YOLO 训练与导出 → 选定模型 → 运行配置交给检测节点
 ```
 
 这使模型推理和坐标计算可以独立于相机、ROS 进行检查，也让后续板端后端复用相同的检测结果格式。
@@ -138,45 +134,7 @@ Gemini 305 驱动 ──→ ROS 适配节点 ────┘
 ROS 包中的 `citrus_vision` 目录是指向根目录 `src/citrus_vision` 的相对符号链接。真实算法源码统一维护在根目录下，ROS 包装负责注册和安装。
 发行包名独立，保证加载 ROS 环境后，pip 的 extras 与 CLI 元数据仍可正确识别。
 
-## 5. 上游：数据到模型
-
-从仓库根目录执行，先激活已安装项目依赖的虚拟环境：
-
-```bash
-citrus-prepare-data --source data/raw/testA --output data/citrus_mini --sample 100 --seed 42
-citrus-train --config configs/training/citrus.yaml
-citrus-export --weights runs/train/citrus_experiment/weights/best.pt --format onnx
-```
-
-| 步骤 | 输入 | 输出 |
-| --- | --- | --- |
-| 数据准备 | 原始 `images/` 与对应 `labels/` | 训练/验证图片和标签、`split_manifest.json` |
-| 模型训练 | 预训练权重、数据集 YAML、训练 YAML | 训练目录、权重、参数、评估产物 |
-| 模型选择 | 候选模型的验证结果 | 选定的业务权重 |
-| 模型导出 | `.pt` 模型 | ONNX 等部署产物 |
-
-数据划分只使用图片和标签配对，拒绝重复文件 stem 和已有输出目录。固定 seed 便于复现划分。
-数据配置保留原仓库 15 类顺序，其中 ID 12 对应 `S14 Canker`，ID 14 对应 `S12 Algal spot`；不能按名称中的数字重新排序。
-
-每次训练的配置与产物关系如下：
-
-```text
-runs/train/
-├── configs/train-<唯一标识>/
-│   ├── dataset.yaml                 # 解析成绝对路径的数据集快照
-│   └── training.yaml                # 本次训练请求的配置
-└── citrus_experiment/               # 同名目录存在时训练器自动递增
-    ├── weights/
-    │   ├── best.pt
-    │   └── last.pt
-    ├── args.yaml
-    ├── training_config.yaml         # 原配置与独立快照的引用
-    └── 其他训练和验证产物
-```
-
-选定业务模型后，将其放到 `weights/citrus/best.pt`，或者修改运行配置中的模型位置。运行节点加载配置指定的权重；训练结束不会自动替换正在使用的模型。
-
-## 6. 下游：相机到坐标
+## 5. 主线：相机到坐标
 
 ```text
 /camera/color/image_raw
@@ -200,7 +158,7 @@ runs/train/
 定位节点按采集时间近似同步检测与深度，彩色 CameraInfo 单独缓存。默认时间窗口 0.04 秒、缓存 30 帧。
 启动相机时显式要求深度对齐到 COLOR。定位节点再检查检测、深度和内参的坐标系与尺寸；错误输入会被拒绝。
 
-## 7. 坐标与消息约定
+## 6. 坐标与消息约定
 
 | 消息 | 内容 |
 | --- | --- |
@@ -222,6 +180,44 @@ runs/train/
 几何模块处理支持的畸变模型；带分箱或部分 ROI 的标定暂不支持。
 
 输出代表中心邻域可见表面位置。手眼标定、机械臂 base 系转换、抓取点规划和硬件控制属于后续范围。
+
+## 7. 上游：数据到模型
+
+从仓库根目录执行，先激活已安装项目依赖的虚拟环境：
+
+```bash
+citrus-prepare-data --source data/raw/testA --output data/citrus_mini --sample 100 --seed 42
+citrus-train --config configs/training/citrus.yaml
+citrus-export --weights runs/train/citrus_experiment/weights/best.pt --format onnx
+```
+
+| 步骤 | 输入 | 输出 |
+| --- | --- | --- |
+| 数据准备 | 原始 `images/` 与对应 `labels/` | 训练/验证图片和标签、`split_manifest.json` |
+| 模型训练 | 预训练权重、数据集 YAML、训练 YAML | 训练目录、权重、参数、评估产物 |
+| 模型选择 | 候选模型的验证结果 | 选定的业务权重 |
+| 模型导出 | `.pt` 模型 | ONNX 等部署产物 |
+
+数据划分只使用图片和标签配对，拒绝重复文件 stem 和已有输出目录。固定 seed 便于复现划分。
+数据配置保持训练标签的 15 类顺序，其中 ID 12 对应 `S14 Canker`，ID 14 对应 `S12 Algal spot`；不能按名称中的数字重新排序。
+
+每次训练的配置与产物关系如下：
+
+```text
+runs/train/
+├── configs/train-<唯一标识>/
+│   ├── dataset.yaml                 # 解析成绝对路径的数据集快照
+│   └── training.yaml                # 本次训练请求的配置
+└── citrus_experiment/               # 同名目录存在时训练器自动递增
+    ├── weights/
+    │   ├── best.pt
+    │   └── last.pt
+    ├── args.yaml
+    ├── training_config.yaml         # 原配置与独立快照的引用
+    └── 其他训练和验证产物
+```
+
+选定业务模型后，将其放到 `weights/citrus/best.pt`，或者修改运行配置中的模型位置。运行节点加载配置指定的权重；训练结束不会自动替换正在使用的模型。
 
 ## 8. 四类配置及路径规则
 
@@ -263,7 +259,7 @@ runs/train/
 
 | 位置 | 当前角色 |
 | --- | --- |
-| `weights/yolov8n.pt` | 已从旧工程迁入，用于通用目标检查 |
+| `weights/yolov8n.pt` | 来自原 depth_estimation，用于通用目标检查 |
 | `weights/legacy/HLB_*.pt` | 已保留的三个历史权重，格式与标签兼容性待核对 |
 | `weights/yolo11n.pt` | 训练初始化模型的约定位置，需要另行准备 |
 | `weights/citrus/best.pt` | 选定业务权重的约定位置，需要训练或准备后放入 |
@@ -301,6 +297,7 @@ Git 只保留 `data/README.md` 和 `weights/README.md` 等说明，不提交数�
 
 | 想做的事 | 入口 |
 | --- | --- |
+| 启动相机、检测与三维定位 | `ros2 launch citrus_bringup pipeline.launch.py` |
 | 准备训练数据 | `citrus-prepare-data` 或 `python scripts/prepare_data.py` |
 | 训练模型 | `citrus-train` 或 `python scripts/train.py` |
 | 图片/视频离线检测 | `citrus-detect` 或 `python scripts/detect.py` |
@@ -324,9 +321,7 @@ ros2 launch citrus_bringup pipeline.launch.py profile:=generic weights_dir:="$PW
 `profile:=citrus` 选择病害运行配置。`profile_file` 和 `camera_file` 支持指定自定义配置。
 `start_camera:=false` 用于已有外部相机话题或 rosbag 输入，检测与定位节点会等待相应数据。
 
-根目录 `main.py` 是离线 2D 检测入口，需要提供 `--source`；统一相机三维流程通过 ROS launch 启动。
-根目录 `split_data.py` 继续包装数据准备入口；`utils/arm_vision.py` 保留旧像素坐标 API，内部复用公共检测器。
-`examples/legacy_grasp` 用于追溯原图片对准、模拟串口和模拟抓取演示，日常开发使用新的 CLI 与 ROS 入口。
+系统编排统一使用 `citrus_bringup` 的 `pipeline.launch.py`。数据准备、训练、离线检测和导出分别使用表中的正式脚本或已安装命令，公共实现集中在 `src/citrus_vision`。
 
 ## 12. 校验和 CI
 
@@ -362,7 +357,7 @@ ros2 launch citrus_bringup pipeline.launch.py profile:=generic weights_dir:="$PW
 | 部署到香橙派 | [DEPLOYMENT.md](DEPLOYMENT.md) |
 | 修改后应运行哪些检查 | [VALIDATION.md](VALIDATION.md) |
 | 已验证和未验证能力 | [VALIDATION_RESULTS.md](VALIDATION_RESULTS.md) |
-| 迁移来源、旧入口和行为变化 | [MIGRATION.md](MIGRATION.md) |
+| 工程来源、入口和契约演进 | [MIGRATION.md](MIGRATION.md) |
 
 具体修改时：换模型或阈值先改 `configs/runtime`；改训练超参数先改 `configs/training`；改相机 profile 先改 `configs/cameras`；改推理实现进入 `inference.py`；改坐标算法进入 `geometry.py`；改 ROS 数据匹配进入 `citrus_localizer/node.py`。
 

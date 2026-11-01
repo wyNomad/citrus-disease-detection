@@ -3,7 +3,7 @@
 
   <h1>柑橘病害检测与 RGB-D 三维定位</h1>
 
-  <p>数据准备 · YOLO 训练 · 相机检测 · 三维坐标</p>
+  <p>Gemini 305 · 目标检测 · RGB-D 三维定位</p>
 
   <p>
     <a href="docs/REPOSITORY_GUIDE.md">仓库结构</a> ·
@@ -20,7 +20,9 @@
 
 ## 项目定位
 
-本项目将**模型开发**与**相机应用**放在同一仓库：上游准备数据、训练和导出模型；下游调用 **Orbbec Gemini 305（G40351-191）** 与选定模型，输出目标类别、像素位置和相机光学坐标系下的三维坐标。
+本项目以 `depth_estimation` 的**相机采集 → 目标检测 → 三维定位**为主线：调用 **Orbbec Gemini 305（G40351-191）** 与选定模型，输出目标类别、像素位置和相机光学坐标系下的三维坐标。
+
+YOLO 数据准备、训练和导出作为上游工具，为这条视觉通路提供模型。日常物体与柑橘病害通过运行配置切换，共用检测和定位实现。
 
 开发环境为 **Ubuntu 22.04 / Python 3.10 / ROS 2 Humble**，目标设备为 **香橙派 5 Plus / RK3588 / Ubuntu 22.04 ARM64**。
 
@@ -34,18 +36,18 @@
 
 > 数据集与模型权重需要另行准备。当前完成的是仓库基础与软件校验，硬件和业务效果按上述范围继续验收。
 
-## 从数据到目标坐标
+## 检测与定位主线
 
 ```mermaid
 flowchart LR
-    D[图片与 YOLO 标签] --> T[数据划分与模型训练]
-    T --> W[选定权重与模型导出]
-    W --> I[公共检测接口]
-    C[Gemini 305 彩色图] --> I
+    C[Gemini 305 彩色图] --> I[目标检测]
     I --> B[原图检测框与类别]
     B --> L[三维定位]
     Z[对齐深度与彩色内参] --> L
     L --> P[相机光学坐标 · 米]
+    D[图片与 YOLO 标签] --> T[上游训练与导出]
+    T --> W[选定模型]
+    W --> I
 ```
 
 离线工具与 ROS 检测节点共用推理实现，深度采样和反投影集中在公共几何模块。运行时通过配置切换通用物体或病害模型。
@@ -81,25 +83,7 @@ citrus-detect --config configs/runtime/generic.yaml --source /absolute/path/imag
 
 结果保存在 `runs/detect-001/`：`detections.jsonl` 包含原图尺寸、类别、置信度、检测框和中心像素；`--save-images` 同时保存标注图片。每次运行请选择新的输出目录，程序拒绝覆盖已有结果，也不会自动下载缺失权重。
 
-## 上游：数据与模型开发
-
-准备训练初始化权重 `weights/yolo11n.pt` 和原始图片/标签，核对配置后执行：
-
-```bash
-citrus-prepare-data --source data/raw/testA --output data/citrus_mini --sample 100 --seed 42
-citrus-train --config configs/training/citrus.yaml
-```
-
-数据划分使用固定 seed，并拒绝已有输出目录。训练为每次任务保存独立数据配置快照，同名训练目录存在时自动递增。
-
-```bash
-python -m pip install -r requirements/export.txt
-citrus-export --weights runs/train/citrus_experiment/weights/best.pt --format onnx
-```
-
-实际训练目录以命令输出为准。选定的业务模型放到 `weights/citrus/best.pt`，或者调整运行配置的模型位置。15 类标签顺序与权重管理约定见 [数据与模型](docs/DATA_AND_MODELS.md)。
-
-## 下游：Gemini 305 与 ROS 2
+## 主线运行：Gemini 305 与 ROS 2
 
 先按 [环境安装](docs/SETUP.md) 准备 ROS 系统依赖。首次使用时获取固定版本相机驱动；已有 `ros2_ws/src/vendor/orbbec` 时跳过获取步骤。
 
@@ -131,6 +115,24 @@ ros2 launch citrus_bringup pipeline.launch.py profile:=generic weights_dir:="$PW
 
 输出代表中心邻域的可见表面位置。手眼标定、机械臂坐标转换与抓取控制属于后续范围，接口细节见 [架构与消息约定](docs/ARCHITECTURE.md)。
 
+## 上游：数据与模型开发
+
+准备训练初始化权重 `weights/yolo11n.pt` 和原始图片/标签，核对配置后执行：
+
+```bash
+citrus-prepare-data --source data/raw/testA --output data/citrus_mini --sample 100 --seed 42
+citrus-train --config configs/training/citrus.yaml
+```
+
+数据划分使用固定 seed，并拒绝已有输出目录。训练为每次任务保存独立数据配置快照，同名训练目录存在时自动递增。
+
+```bash
+python -m pip install -r requirements/export.txt
+citrus-export --weights runs/train/citrus_experiment/weights/best.pt --format onnx
+```
+
+实际训练目录以命令输出为准。选定的业务模型放到 `weights/citrus/best.pt`，或者调整运行配置的模型位置。15 类标签顺序与权重管理约定见 [数据与模型](docs/DATA_AND_MODELS.md)。
+
 ## 仓库导航
 
 | 位置 | 职责 |
@@ -141,7 +143,7 @@ ros2 launch citrus_bringup pipeline.launch.py profile:=generic weights_dir:="$PW
 | [`ros2_ws/src`](ros2_ws/src) | 五个自有 ROS 包，以及本地准备的相机依赖 |
 | [`dependencies`](dependencies) | 驱动固定提交、补丁与来源 |
 | [`requirements`](requirements) | 核心、训练、导出、开发和板端依赖约定 |
-| [`tests`](tests) / [`examples`](examples) | 回归测试、合成示例与历史演示 |
+| [`tests`](tests) / [`examples`](examples) | 回归测试与无硬件几何示例 |
 | [`weights`](weights) / [`data`](data) | 本地模型与数据的存放约定 |
 | [`docs`](docs) | 安装、架构、部署、迁移与验证资料 |
 

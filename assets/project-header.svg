@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1280" height="320" viewBox="0 0 1280 320" role="img" aria-labelledby="title desc">
-  <title id="title">Citrus Disease Detection — Train, Detect, Localize</title>
-  <desc id="desc">A citrus fruit and stereo camera illustrate the project's training, detection and RGB-D localization workflow. Hardware validation and RK3588 adaptation remain future work.</desc>
+  <title id="title">Citrus Disease Detection — Capture, Detect, Localize</title>
+  <desc id="desc">A citrus fruit and stereo camera illustrate the project's Gemini 305 detection and RGB-D localization pipeline, supported by upstream model training. Hardware validation and RK3588 adaptation remain future work.</desc>
   <defs>
     <linearGradient id="background" x1="0" y1="0" x2="1" y2="1">
       <stop stop-color="#0c1a24"/><stop offset="1" stop-color="#153b32"/>
@@ -22,10 +22,10 @@
   <g font-family="DejaVu Sans,Arial,sans-serif">
     <text x="76" y="76" font-size="12" letter-spacing="3" fill="#87d9bb">AGRICULTURAL COMPUTER VISION</text>
     <text x="73" y="135" font-size="41" font-weight="700" fill="#f1faf5">Citrus Disease Detection</text>
-    <text x="76" y="174" font-size="18" fill="#b9d0c7">Model development meets RGB-D localization.</text>
+    <text x="76" y="174" font-size="18" fill="#b9d0c7">Gemini 305 perception with RGB-D coordinates.</text>
     <g font-size="12" font-weight="600" fill="#e3f8ed">
       <rect x="76" y="207" width="108" height="30" rx="15" fill="#285247"/>
-      <text x="96" y="227">YOLO TRAIN</text>
+      <text x="90" y="227">GEMINI 305</text>
       <path d="M195 222H214M209 217l5 5-5 5" fill="none" stroke="#79bba0" stroke-width="1.5"/>
       <rect x="225" y="207" width="108" height="30" rx="15" fill="#285247"/>
       <text x="248" y="227">DETECTION</text>
