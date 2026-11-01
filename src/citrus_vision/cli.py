@@ -191,6 +191,7 @@ def val_main():
     from ultralytics import YOLO
 
     model = YOLO(str(weights), task="detect")
+    model.overrides["device"] = args.device
     if _class_names(model.names) != _class_names(data["names"]):
         raise ValueError("Model and dataset class mappings differ; evaluate with matching labels")
     output.mkdir(parents=True, exist_ok=False)

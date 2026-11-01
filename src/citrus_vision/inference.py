@@ -20,6 +20,8 @@ class UltralyticsDetector:
 
         self.model = YOLO(str(model_path), task="detect")
         self.config = config
+        # Export-format class metadata may initialize a backend before predict().
+        self.model.overrides["device"] = config.device
         names = self.model.names
         self.names = dict(enumerate(names)) if isinstance(names, list) else names
         requested = set(config.target_classes)

@@ -3,7 +3,6 @@
 from pathlib import Path
 import os
 import subprocess
-import sys
 import tempfile
 import venv
 

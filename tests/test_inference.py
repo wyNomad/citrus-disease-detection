@@ -15,6 +15,7 @@ def test_shared_adapter_preserves_original_pixels_and_class_filter(tmp_path, mon
 
         def __init__(self, path, task):
             assert task == "detect"
+            self.overrides = {}
 
         def predict(self, **kwargs):
             calls.append(kwargs)
@@ -32,3 +33,21 @@ def test_shared_adapter_preserves_original_pixels_and_class_filter(tmp_path, mon
     assert calls[0]["classes"] == [0]
     with pytest.raises(ValueError, match="not present"):
         create_detector(ModelConfig(path="test.pt", target_classes=["missing"]), tmp_path)
+
+
+@pytest.mark.parametrize("device", ["cpu", "1"])
+def test_exported_model_metadata_uses_requested_device(tmp_path, monkeypatch, device):
+    class ExportedModel:
+        def __init__(self, *args, **kwargs):
+            self.overrides = {}
+
+        @property
+        def names(self):
+            # Ultralytics can initialize an export-format backend while reading names.
+            assert self.overrides.get("device") == device
+            return {0: "bottle"}
+
+    monkeypatch.setitem(sys.modules, "ultralytics", SimpleNamespace(YOLO=ExportedModel))
+    (tmp_path / "test.onnx").touch()
+    detector = create_detector(ModelConfig(path="test.onnx", device=device), tmp_path)
+    assert detector.names == {0: "bottle"}
