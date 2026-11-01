@@ -1,30 +1,54 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="240" viewBox="0 0 1200 240" role="img" aria-labelledby="title desc">
-<title id="title">Citrus Disease Detection</title>
-<desc id="desc">Project illustration for a YOLO11 citrus detection experiment, showing a stylized citrus fruit and detection frame.</desc>
-<defs>
- <linearGradient id="bg" x2="1" y2="1"><stop stop-color="#0b1826"/><stop offset="1" stop-color="#122e2b"/></linearGradient>
- <radialGradient id="fruit"><stop stop-color="#ffcb68"/><stop offset="1" stop-color="#ef8a28"/></radialGradient>
- <pattern id="grid" width="32" height="32" patternUnits="userSpaceOnUse"><path d="M32 0H0V32" fill="none" stroke="#69d6b9" stroke-opacity=".07"/></pattern>
-</defs>
-<rect width="1200" height="240" rx="18" fill="url(#bg)"/>
-<rect width="1200" height="240" rx="18" fill="url(#grid)"/>
-<rect x="42" y="40" width="4" height="156" rx="2" fill="#55dfb1"/>
-<text x="66" y="67" font-family="Arial,sans-serif" font-size="13" letter-spacing="3" fill="#68dfbd">AGRICULTURAL COMPUTER VISION</text>
-<text x="64" y="119" font-family="Arial,sans-serif" font-size="39" font-weight="700" fill="#effaf7">Citrus Disease Detection</text>
-<text x="66" y="151" font-family="Arial,sans-serif" font-size="17" fill="#b3c9c6">YOLO11 · Fruit &amp; leaf imagery · Detection experiments</text>
-<g font-family="Arial,sans-serif" font-size="12" fill="#dcf9ef">
- <rect x="66" y="178" width="102" height="25" rx="12" fill="#1f4941"/><text x="83" y="195">DATA PREP</text>
- <rect x="180" y="178" width="92" height="25" rx="12" fill="#1f4941"/><text x="205" y="195">TRAIN</text>
- <rect x="284" y="178" width="92" height="25" rx="12" fill="#1f4941"/><text x="310" y="195">INFER</text>
- <rect x="388" y="178" width="136" height="25" rx="12" fill="#1f4941"/><text x="408" y="195">PIXEL TARGET</text>
-</g>
-<g transform="translate(958 120)">
- <circle r="80" fill="none" stroke="#59c8a4" stroke-opacity=".2"/>
- <path d="M-94-53v-25h25M69-78h25v25M94 53v25H69M-69 78h-25V53" fill="none" stroke="#67e9ba" stroke-width="3"/>
- <circle cy="10" r="49" fill="url(#fruit)"/>
- <path d="M0-35C-4-61 15-73 44-66 39-41 21-30 0-35Z" fill="#5fd6a1"/>
- <path d="M-21-12q-13 18-8 32" fill="none" stroke="#ffe5ad" stroke-width="4" stroke-linecap="round" opacity=".7"/>
- <path d="M-9 10H9M0 1V19" stroke="#132d2c" stroke-width="1.5" opacity=".6"/>
-</g>
-<path d="M1153 30h18M1162 21v18" stroke="#efb265" opacity=".6"/>
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="320" viewBox="0 0 1280 320" role="img" aria-labelledby="title desc">
+  <title id="title">Citrus Disease Detection — Train, Detect, Localize</title>
+  <desc id="desc">A citrus fruit and stereo camera illustrate the project's training, detection and RGB-D localization workflow. Hardware validation and RK3588 adaptation remain future work.</desc>
+  <defs>
+    <linearGradient id="background" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#0c1a24"/><stop offset="1" stop-color="#153b32"/>
+    </linearGradient>
+    <radialGradient id="fruit" cx=".35" cy=".3" r=".8">
+      <stop stop-color="#ffdc8b"/><stop offset="1" stop-color="#f39135"/>
+    </radialGradient>
+    <pattern id="grid" width="36" height="36" patternUnits="userSpaceOnUse">
+      <path d="M36 0H0V36" fill="none" stroke="#87d8bd" stroke-opacity=".055"/>
+    </pattern>
+    <linearGradient id="lens" x2="1" y2="1">
+      <stop stop-color="#243e49"/><stop offset="1" stop-color="#4ea68c"/>
+    </linearGradient>
+  </defs>
+  <rect width="1280" height="320" rx="20" fill="url(#background)"/>
+  <rect width="1280" height="320" rx="20" fill="url(#grid)"/>
+  <circle cx="1134" cy="112" r="190" fill="#5bddb0" opacity=".035"/>
+  <path d="M50 56V264" stroke="#7be0b4" stroke-width="4" stroke-linecap="round"/>
+  <g font-family="DejaVu Sans,Arial,sans-serif">
+    <text x="76" y="76" font-size="12" letter-spacing="3" fill="#87d9bb">AGRICULTURAL COMPUTER VISION</text>
+    <text x="73" y="135" font-size="41" font-weight="700" fill="#f1faf5">Citrus Disease Detection</text>
+    <text x="76" y="174" font-size="18" fill="#b9d0c7">Model development meets RGB-D localization.</text>
+    <g font-size="12" font-weight="600" fill="#e3f8ed">
+      <rect x="76" y="207" width="108" height="30" rx="15" fill="#285247"/>
+      <text x="96" y="227">YOLO TRAIN</text>
+      <path d="M195 222H214M209 217l5 5-5 5" fill="none" stroke="#79bba0" stroke-width="1.5"/>
+      <rect x="225" y="207" width="108" height="30" rx="15" fill="#285247"/>
+      <text x="248" y="227">DETECTION</text>
+      <path d="M344 222H363M358 217l5 5-5 5" fill="none" stroke="#79bba0" stroke-width="1.5"/>
+      <rect x="374" y="207" width="128" height="30" rx="15" fill="#5c4830"/>
+      <text x="394" y="227" fill="#ffe4bc">3D POSITION</text>
+    </g>
+    <text x="76" y="273" font-size="12" letter-spacing="1" fill="#87aaa0">PYTHON 3.10  /  ROS 2 HUMBLE  /  GEMINI 305</text>
+  </g>
+  <g transform="translate(1019 138)">
+    <circle r="92" fill="none" stroke="#70b99e" stroke-opacity=".18"/>
+    <path d="M-107-51v-30h30M77-81h30v30M107 51v30H77M-77 81h-30V51" fill="none" stroke="#8be4b6" stroke-width="2"/>
+    <circle cy="5" r="49" fill="url(#fruit)"/>
+    <path d="M0-38C-1-67 18-75 46-65 38-40 21-32 0-38Z" fill="#75d39f"/>
+    <path d="M-21-17q-15 18-9 36" fill="none" stroke="#fff0bf" stroke-width="4" stroke-linecap="round" opacity=".65"/>
+    <path d="M-9 5H9M0-4V14" stroke="#6a4b2f" stroke-width="1.5"/>
+  </g>
+  <path d="M985 206l-27 34M1053 206l27 34" stroke="#83bfaa" stroke-width="1.5" stroke-dasharray="4 5" opacity=".6"/>
+  <g transform="translate(1019 257)">
+    <rect x="-95" y="-22" width="190" height="44" rx="15" fill="#203e3a" stroke="#759e91"/>
+    <circle cx="-59" r="14" fill="url(#lens)" stroke="#98c6b2"/>
+    <circle cx="59" r="14" fill="url(#lens)" stroke="#98c6b2"/>
+    <circle cx="-59" r="6" fill="#142b32"/><circle cx="59" r="6" fill="#142b32"/>
+    <path d="M-21 0H21" stroke="#82b6a1" stroke-width="2" stroke-dasharray="3 4"/>
+  </g>
 </svg>
