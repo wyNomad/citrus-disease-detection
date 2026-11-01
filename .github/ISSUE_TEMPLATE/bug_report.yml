@@ -1,41 +1,69 @@
-name: 运行问题
-description: 报告数据处理、训练或检测入口的运行问题
+name: 运行与部署问题
+description: 报告训练、检测、ROS 定位、相机接入或板端运行问题
 title: "[Bug] "
 labels: []
 body:
   - type: dropdown
-    id: entry
+    id: component
     attributes:
-      label: 运行入口
+      label: 涉及模块
       options:
-        - split_data.py
-        - scripts/train.py
-        - scripts/detect.py
-        - utils/arm_vision.py
-        - main.py
+        - 数据准备 / citrus-prepare-data
+        - 模型训练 / citrus-train
+        - 模型导出 / citrus-export
+        - 离线检测 / citrus-detect
+        - Gemini 305 驱动与取流
+        - ROS 检测节点 / citrus_detector
+        - ROS 三维定位 / citrus_localizer
+        - 统一启动 / citrus_bringup
+        - RK3588 / RKNN 适配与部署
+        - 环境安装 / 打包 / CI / 文档
+    validations:
+      required: true
+  - type: dropdown
+    id: input_type
+    attributes:
+      label: 数据与设备来源
+      options:
+        - 本地图片或视频
+        - 合成数据 / 自动化测试
+        - rosbag 或外部 ROS 话题
+        - Gemini 305 真机
+        - RK3588 目标板
+        - 与图像或硬件无关
     validations:
       required: true
   - type: textarea
     id: environment
     attributes:
-      label: 环境
-      description: 系统、Python、Ultralytics、PyTorch、设备，以及代码版本。
+      label: 环境与代码版本
+      description: 提供代码提交、系统及架构、Python、ROS 发行版；涉及模型时补充 Ultralytics / PyTorch / ONNX Runtime 版本。
+      placeholder: "commit: ...\nOS / arch: Ubuntu 22.04 / x86_64\nPython / ROS: ...\n模型与推理后端: ..."
     validations:
       required: true
   - type: textarea
     id: reproduce
     attributes:
       label: 复现步骤与配置
-      description: 运行命令、修改过的参数、数据目录结构和模型来源。
+      description: 提供实际命令、运行配置、模型来源和最小输入；注明使用 generic、citrus 还是自定义配置。
     validations:
       required: true
   - type: textarea
+    id: device_context
+    attributes:
+      label: 相机与板端信息（适用时填写）
+      description: 相机型号/固件/驱动、流分辨率/帧率、话题与 frame_id、深度编码/单位、对齐方式；板端问题补充 NPU 驱动与 Runtime 版本。未接设备请注明未实测。
+  - type: textarea
     id: output
     attributes:
-      label: 实际结果与错误日志
+      label: 实际结果与日志
+      description: 包含完整错误上下文、进程退出状态；坐标问题附目标检测和深度有效状态。
+      render: text
     validations:
       required: true
   - type: textarea
     id: expected
     attributes:
       label: 预期结果
+    validations:
+      required: true
