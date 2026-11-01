@@ -58,13 +58,27 @@ def main():
                     "--config", str(config), "--project", str(project)], check=True)
     checkpoint = project / "smoke/weights/best.pt"
     assert checkpoint.is_file(), "Trainer did not save best.pt"
+    subprocess.run([sys.executable, "-c", "from citrus_vision.cli import val_main; val_main()",
+                    "--weights", str(checkpoint), "--data", str(dataset), "--imgsz", "64",
+                    "--output", str(root / "evaluation")], check=True)
+    metrics = json.loads((root / "evaluation/metrics.json").read_text())
+    assert metrics and all(np.isfinite(value) for value in metrics.values())
     image = cv2.imread(str(root / "data/images/val/0.jpg"))
+    runtime = root / "runtime.yaml"
+    runtime.write_text(yaml.safe_dump(dict(model=dict(path=str(checkpoint), image_size=64))))
+    subprocess.run([sys.executable, "-c", "from citrus_vision.cli import detect_main; detect_main()",
+                    "--config", str(runtime), "--source", str(root / "data/images/val/0.jpg"),
+                    "--conf", "0.1", "--imgsz", "64", "--output", str(root / "detection")], check=True)
+    assert json.loads((root / "detection/detections.jsonl").read_text())["width"] == 64
     model = YOLO(str(checkpoint), task="detect")
     assert len(model.predict(image, imgsz=64, device="cpu", verbose=False)) == 1
     subprocess.run([sys.executable, "-c", "from citrus_vision.cli import export_main; export_main()",
-                    "--weights", str(checkpoint), "--format", "onnx", "--imgsz", "64"], check=True)
+                    "--weights", str(checkpoint), "--format", "onnx", "--imgsz", "64",
+                    "--opset", "17"], check=True)
     exported = checkpoint.with_suffix(".onnx")
     onnx.checker.check_model(str(exported))
+    manifest = json.loads(exported.with_suffix(".onnx.json").read_text())
+    assert manifest["class_names"] == {"0": "synthetic_square"}
     session = ort.InferenceSession(str(exported), providers=["CPUExecutionProvider"])
     outputs = session.run(None, {session.get_inputs()[0].name: np.zeros((1, 3, 64, 64), np.float32)})
     assert outputs and all(np.isfinite(output).all() for output in outputs)
@@ -77,7 +91,8 @@ def main():
     detector.detect(image)
     result = {"synthetic": True, "epochs": 1, "checkpoint": str(checkpoint),
               "onnx": str(exported), "onnx_shapes": [list(output.shape) for output in outputs],
-              "onnx_matches_pytorch": True, "shared_detector_onnx": True}
+              "onnx_matches_pytorch": True, "shared_detector_onnx": True,
+              "independent_evaluation": True, "offline_detection": True, "model_manifest": True}
     (root / "result.json").write_text(json.dumps(result, indent=2) + "\n")
     print(json.dumps(result))
 

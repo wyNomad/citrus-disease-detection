@@ -13,6 +13,15 @@ citrus-detect --config configs/runtime/citrus.yaml --weights-dir weights --sourc
 支持单图、图片目录、视频路径和摄像头编号；只有 ROS 管线使用 Gemini 305 的对齐深度。离线检测仅输出 2D 像素，不能凭单张彩色图生成实测三维坐标。
 输出为每帧一行的 JSONL，含类别 ID/名称、置信度、原图尺寸、框和中心。可选保存标注帧。输出目录存在时拒绝执行，避免覆盖已有 JSONL 和图片；每次运行需选择新目录。
 
+离线调参时可覆盖运行配置中的模型字段，仅影响本次调用：
+
+```bash
+citrus-detect --config configs/runtime/citrus.yaml --model "$PWD/runs/train/citrus_experiment/weights/best.pt" --source data/citrus_mini/images/val --conf 0.3 --iou 0.5 --imgsz 640 --device cpu --output runs/detect-tuned --save-images
+```
+
+还支持 `--classes "S2 Healthy leaf"` 等完整类别名；单独传 `--classes` 清除过滤。配置文件不被改写，供 ROS 使用时需把确定的参数保存到 runtime YAML。
+独立评估使用 `citrus-val`，它需要带标签的数据集并输出指标；离线检测可接受未标注图片。训练、评估与模型导出步骤见 [模型开发指南](TRAINING.md)。
+
 ## 模型配置
 
 | 配置 | 权重位置 | 用途 |

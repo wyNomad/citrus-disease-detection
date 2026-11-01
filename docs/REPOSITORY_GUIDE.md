@@ -3,7 +3,7 @@
 本说明对应当前主分支 `master`。主工程位于本地 `depth_estimation/citrus-disease-detection`，远端仓库为 `wyNomad/citrus-disease-detection`。
 
 工程以 depth_estimation 的 Gemini 305 图像检测与三维定位为主线：采集彩色图、调用模型、结合对齐深度和内参，输出相机光学坐标系下的目标位置。
-数据准备、YOLO 训练和导出是为主线提供模型的上游工具，统一使用 scripts/ 或 citrus-* 入口。
+数据准备、YOLO 训练调参、独立评估、离线检测和导出构成完整的上游模型开发流程，统一使用 scripts/ 或 citrus-* 入口。
 
 开发环境为 Ubuntu 22.04、Python 3.10、ROS 2 Humble；目标设备为香橙派 5 Plus、RK3588、Ubuntu 22.04 ARM64。
 当前已完成软件整合与软件通路验证。真实相机、真实病害效果、板端环境及 NPU 后端仍待后续工作。
@@ -27,16 +27,17 @@ citrus-disease-detection/
 │   ├── inference.py                  # 推理后端与统一检测接口
 │   ├── geometry.py                   # 深度处理、相机反投影
 │   ├── dataset.py                    # 数据配对、抽样、划分
-│   └── cli.py                        # 训练、离线检测、导出实现
+│   └── cli.py                        # 训练、独立评估、离线检测、导出实现
 │
 ├── scripts/                          # 命令包装与工程工具
 │   ├── prepare_data.py
 │   ├── train.py
+│   ├── validate.py                   # 独立评估选定模型
 │   ├── detect.py
 │   ├── export.py
 │   ├── setup_camera.py               # 获取/导入固定版本相机驱动并应用补丁
 │   ├── build_ros.py                  # 使用当前 Python 构建 ROS 工作空间
-│   └── check_training_export.py      # 真实训练与 ONNX 导出烟雾检查
+│   └── check_training_export.py      # 合成训练、评估、检测与 ONNX 检查
 │
 ├── configs/                          # 业务与硬件配置
 │   ├── datasets/citrus.yaml          # 数据位置、训练/验证子目录、15 类标签
@@ -95,7 +96,7 @@ Gemini 305 采集 → ROS 检测节点 → 公共推理 → 检测消息
                                               ↓
 对齐深度与内参 → ROS 定位节点 → 公共几何计算 → 三维目标消息
 
-数据准备 → YOLO 训练与导出 → 选定模型 → 运行配置交给检测节点
+数据准备 → 训练调参 → 独立评估与离线检测 → 导出/选定模型 → 运行配置交给检测节点
 ```
 
 这使模型推理和坐标计算可以独立于相机、ROS 进行检查，也让后续板端后端复用相同的检测结果格式。
@@ -118,7 +119,7 @@ Gemini 305 采集 → ROS 检测节点 → 公共推理 → 检测消息
 | [inference.py](../src/citrus_vision/inference.py) | `Detector` 接口、Ultralytics 实现、后端工厂 | 更换推理后端、调整检测接入 |
 | [geometry.py](../src/citrus_vision/geometry.py) | 深度单位转换、有效值中位数、反畸变、像素反投影 | 调整深度采样或定位方法 |
 | [dataset.py](../src/citrus_vision/dataset.py) | 图片/标签配对、固定 seed 抽样与划分、输出清单 | 数据准备流程 |
-| [cli.py](../src/citrus_vision/cli.py) | 训练、离线检测、导出入口 | 命令参数、结果保存和实验快照 |
+| [cli.py](../src/citrus_vision/cli.py) | 训练、独立评估、离线检测、导出入口 | 命令参数、结果保存和实验快照 |
 
 推理输出使用原始彩色图像的像素坐标。图像缩放和 letterbox 的逆变换由推理后端负责，定位层按原图像素查询对应深度。
 当前推理后端为 `ultralytics`。`rknn` 只是明确报未实现的预留分支，后续需要实现并在板卡上验证。
@@ -127,7 +128,7 @@ Gemini 305 采集 → ROS 检测节点 → 公共推理 → 检测消息
 
 | 名称 | 用途 |
 | --- | --- |
-| `citrus-vision-core` | pip 管理的 Python 发行包，定义依赖、extras 和四个 CLI |
+| `citrus-vision-core` | pip 管理的 Python 发行包，定义依赖、extras 和五个 CLI |
 | `citrus_vision` | Python 导入模块，例如 `from citrus_vision.geometry import deproject` |
 | `citrus_vision` ROS 包 | 向 ROS overlay 安装公共模块，供 ROS 启动器与节点使用 |
 
@@ -188,6 +189,7 @@ ROS 包中的 `citrus_vision` 目录是指向根目录 `src/citrus_vision` 的�
 ```bash
 citrus-prepare-data --source data/raw/testA --output data/citrus_mini --sample 100 --seed 42
 citrus-train --config configs/training/citrus.yaml
+citrus-val --weights runs/train/citrus_experiment/weights/best.pt --data configs/datasets/citrus.yaml --output runs/val/citrus-001
 citrus-export --weights runs/train/citrus_experiment/weights/best.pt --format onnx
 ```
 
@@ -195,8 +197,10 @@ citrus-export --weights runs/train/citrus_experiment/weights/best.pt --format on
 | --- | --- | --- |
 | 数据准备 | 原始 `images/` 与对应 `labels/` | 训练/验证图片和标签、`split_manifest.json` |
 | 模型训练 | 预训练权重、数据集 YAML、训练 YAML | 训练目录、权重、参数、评估产物 |
+| 独立评估 | 候选权重、匹配类别的数据 YAML、评估参数 | metrics.json、配置与模型 SHA-256 |
+| 离线检测 | 运行配置、候选模型、图片或视频 | JSONL 检测结果、可选标注图 |
 | 模型选择 | 候选模型的验证结果 | 选定的业务权重 |
-| 模型导出 | `.pt` 模型 | ONNX 等部署产物 |
+| 模型导出 | `.pt` 模型、输入尺寸及导出参数 | ONNX 等部署产物与模型说明 JSON |
 
 数据划分只使用图片和标签配对，拒绝重复文件 stem 和已有输出目录。固定 seed 便于复现划分。
 数据配置保持训练标签的 15 类顺序，其中 ID 12 对应 `S14 Canker`，ID 14 对应 `S12 Algal spot`；不能按名称中的数字重新排序。
@@ -216,6 +220,8 @@ runs/train/
     ├── training_config.yaml         # 原配置与独立快照的引用
     └── 其他训练和验证产物
 ```
+
+训练命令的常用参数覆盖 YAML；优化器、学习率、增强等高级设置通过训练 YAML 交给 YOLO。独立评估命令与导出说明文件的用法见 [TRAINING.md](TRAINING.md)。
 
 选定业务模型后，将其放到 `weights/citrus/best.pt`，或者修改运行配置中的模型位置。运行节点加载配置指定的权重；训练结束不会自动替换正在使用的模型。
 
@@ -300,6 +306,7 @@ Git 只保留 `data/README.md` 和 `weights/README.md` 等说明，不提交数�
 | 启动相机、检测与三维定位 | `ros2 launch citrus_bringup pipeline.launch.py` |
 | 准备训练数据 | `citrus-prepare-data` 或 `python scripts/prepare_data.py` |
 | 训练模型 | `citrus-train` 或 `python scripts/train.py` |
+| 独立评估模型 | `citrus-val` 或 `python scripts/validate.py` |
 | 图片/视频离线检测 | `citrus-detect` 或 `python scripts/detect.py` |
 | 模型导出 | `citrus-export` 或 `python scripts/export.py` |
 | 准备相机依赖 | `python scripts/setup_camera.py` |
@@ -321,7 +328,7 @@ ros2 launch citrus_bringup pipeline.launch.py profile:=generic weights_dir:="$PW
 `profile:=citrus` 选择病害运行配置。`profile_file` 和 `camera_file` 支持指定自定义配置。
 `start_camera:=false` 用于已有外部相机话题或 rosbag 输入，检测与定位节点会等待相应数据。
 
-系统编排统一使用 `citrus_bringup` 的 `pipeline.launch.py`。数据准备、训练、离线检测和导出分别使用表中的正式脚本或已安装命令，公共实现集中在 `src/citrus_vision`。
+系统编排统一使用 `citrus_bringup` 的 `pipeline.launch.py`。数据准备、训练、独立评估、离线检测和导出分别使用表中的正式脚本或已安装命令，公共实现集中在 `src/citrus_vision`。
 
 ## 12. 校验和 CI
 
@@ -332,7 +339,8 @@ ros2 launch citrus_bringup pipeline.launch.py profile:=generic weights_dir:="$PW
 | `tests/test_geometry.py` | 深度编码、边界、无效值、光学轴向和畸变 |
 | `tests/test_inference.py` | 公共检测结果与类别过滤契约 |
 | `tests/test_detection_output.py` | 失败任务与重复运行不能覆盖旧检测结果 |
-| `tests/test_training.py` | 训练路径与独立配置快照 |
+| `tests/test_training.py` | 训练路径、参数覆盖与独立配置快照 |
+| `tests/test_model_workflow.py` | 独立评估、类别匹配、离线调参、导出说明与非法参数 |
 | `tests/test_packaging.py` | 公共发行包元数据与 CLI |
 | `tests/ros/` | 实际消息传输、输入保护、时间匹配和启动失败状态 |
 
@@ -340,10 +348,10 @@ ros2 launch citrus_bringup pipeline.launch.py profile:=generic weights_dir:="$PW
 
 1. `core`：安装核心与 OpenCV、检查 Python/XML/YAML/文档链接、运行核心测试、构建分发包、在仓库外的干净环境安装 wheel。
 2. `ros`：在 Ubuntu 22.04 / Humble 容器内构建五个自有包，检查 ROS 通路、保护条件、退出状态和包元数据。
-3. `training-export`：运行合成 YOLO11 CPU 训练、checkpoint 重载、ONNX 导出与 PyTorch/ONNX 一致性检查。
+3. `training-export`：运行合成 YOLO11 CPU 训练、独立评估、离线检测、ONNX 导出与 PyTorch/ONNX 一致性检查。
 
 必需测试通过 `CITRUS_FAIL_ON_SKIP=1` 禁止跳过后报告成功。完整本地测试需先构建并加载 ROS overlay。
-最近的软件验收为 49 项测试零跳过、八包本地构建通过；详情与版本见 [VALIDATION_RESULTS.md](VALIDATION_RESULTS.md)。
+最近的软件验收为 58 项测试零跳过、八包本地构建通过；详情与版本见 [VALIDATION_RESULTS.md](VALIDATION_RESULTS.md)。
 
 ## 13. 文档与日常修改导航
 

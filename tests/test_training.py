@@ -17,7 +17,8 @@ def test_training_resolves_dataset_relative_to_config_not_working_directory(tmp_
         (dataset / "images" / split).mkdir(parents=True)
     data_config.write_text("path: ../../data/small\ntrain: images/train\nval: images/val\nnames:\n  0: leaf\n")
     config = config_dir / "train.yaml"
-    config.write_text("model: initial.pt\ndata: ../datasets/citrus.yaml\nepochs: 10\nname: citrus\n")
+    config.write_text("model: initial.pt\ndata: ../datasets/citrus.yaml\nepochs: 10\nname: citrus\n"
+                      "optimizer: AdamW\nlr0: 0.001\nmosaic: 0.5\n")
     weights = tmp_path / "weights"
     weights.mkdir()
     (weights / "initial.pt").touch()
@@ -36,12 +37,17 @@ def test_training_resolves_dataset_relative_to_config_not_working_directory(tmp_
 
     monkeypatch.setitem(sys.modules, "ultralytics", SimpleNamespace(YOLO=FakeYolo))
     monkeypatch.setattr(sys, "argv", ["citrus-train", "--config", str(config), "--weights-dir", str(weights),
-                                    "--project", str(outputs), "--epochs", "1"])
+                                    "--project", str(outputs), "--epochs", "1", "--batch", "2",
+                                    "--imgsz", "64", "--workers", "0", "--name", "tuned"])
     monkeypatch.chdir(tmp_path)
     train_main()
     resolved = yaml.safe_load(Path(calls[0]["data"]).read_text())
     assert resolved["path"] == str(dataset)
     assert calls[0]["epochs"] == 1
+    assert {key: calls[0][key] for key in ("batch", "imgsz", "workers", "name")} == {
+        "batch": 2, "imgsz": 64, "workers": 0, "name": "tuned"}
+    assert {key: calls[0][key] for key in ("optimizer", "lr0", "mosaic")} == {
+        "optimizer": "AdamW", "lr0": .001, "mosaic": .5}
     assert (actual / "training_config.yaml").is_file()
 
 
