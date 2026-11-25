@@ -1,0 +1,25 @@
+# 实验环境锁定清单（与其它 requirements/*.txt 的版本区间不同，此处为精确锁定）
+#
+# 目的：让「链路冒烟」与「正式实验」跑在同一套依赖版本上，
+#       使三组类别组合的精度对比不混入版本差异。
+# 用法：python -m pip install -r requirements/experiment-lock.txt
+#
+# 已验证组合：Python 3.10.12 / Linux x86_64，CPU 冒烟通过（53 项测试、2 轮训练）。
+# GPU 机器上 torch 请改用与本机 CUDA 匹配的官方 wheel，版本号仍取 2.14.0。
+
+ultralytics==8.4.140
+ultralytics-thop==2.1.6
+torch==2.14.0
+torchvision==0.29.0
+numpy==1.26.4
+opencv-python==4.11.0.86
+PyYAML==6.0.4
+matplotlib==3.5.1
+pandas==2.3.3
+scipy==1.8.0
+Pillow==9.0.1
+psutil==5.9.0
+
+# 仅当需要 ONNX 导出时：
+#   -r export.txt
+# 注意：numpy 必须 <2（见 core.txt），opencv-python 必须 <4.12（见 laptop.txt）。

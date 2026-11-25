@@ -1,0 +1,17 @@
+# 训练配置 · 链路冒烟：抽样 3% 数据、2 轮，仅验证数据管线与训练评估链路贯通
+model: yolo11n.pt
+data: ../datasets/lab_abc.yaml
+name: lab_smoke
+exist_ok: false
+epochs: 2
+patience: 20
+pretrained: true
+imgsz: 640
+device: cpu
+workers: 0
+batch: 16
+amp: false
+seed: 42
+# 仅保留约 3% 的训练样本，用于快速验证
+fraction: 0.03
+plots: true

@@ -1,0 +1,24 @@
+# 独立测试集 · 环境 A：小米/华为手机拍摄，田间自然光或纯色背景板
+# 由 citrus-build-groups --test testA 生成，三个环境互不重叠，
+# 用于考察同一模型在不同采集条件下的泛化差异。
+path: ../../data/lab_testA
+train: images
+val: images
+test: images
+
+names:
+  0: S0 others
+  1: S1 Healthy fruit
+  2: S2 Healthy leaf
+  3: S3 Blotchy mottling
+  4: S4 Red nose fruit
+  5: S5 Zinc deficiency
+  6: S6 Vein yellowing
+  7: S7 Uniform yellowing
+  8: S8 Magnesium deficiency
+  9: S9 Boron deficiency
+  10: S10 Anthracnose
+  11: S11 Citrus greasy spot
+  12: S14 Canker
+  13: S13 Sooty mould
+  14: S12 Algal spot and moss

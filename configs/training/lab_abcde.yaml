@@ -1,0 +1,15 @@
+# 训练配置 · 在 ABCD 基础上追加黄龙病不相关病害(S13~S14)，共 14 类
+model: yolo11n.pt
+data: ../datasets/lab_abcde.yaml
+name: lab_abcde
+exist_ok: false
+epochs: 100
+patience: 20
+pretrained: true
+imgsz: 640
+device: cpu
+workers: 8
+batch: 16
+amp: false
+seed: 42
+plots: true

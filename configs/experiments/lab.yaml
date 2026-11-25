@@ -1,0 +1,17 @@
+# 实验矩阵：每个条目 = 一次训练 + 验证集评估 + 三个独立测试集评估
+# 训练与评估分别复用 citrus-train / citrus-val，本文件只描述编排关系。
+# 运行：python scripts/run_experiments.py --device 0
+
+# 独立测试集，按采集环境划分，用于跨场景泛化对比
+tests:
+  - lab_testA
+  - lab_testB
+  - lab_testC
+
+runs:
+  - config: configs/training/lab_abc.yaml
+    dataset: lab_abc
+  - config: configs/training/lab_abcd.yaml
+    dataset: lab_abcd
+  - config: configs/training/lab_abcde.yaml
+    dataset: lab_abcde
