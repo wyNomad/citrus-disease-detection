@@ -25,10 +25,12 @@ def main():
                         "d=distribution('citrus-vision-core'); "
                         "assert 'inference' in d.metadata.get_all('Provides-Extra'); "
                         "assert {e.name for e in d.entry_points} == "
-                        "{'citrus-prepare-data','citrus-train','citrus-val','citrus-detect','citrus-export'}; "
+                        "{'citrus-prepare-data','citrus-build-groups','citrus-train',"
+                        "'citrus-val','citrus-detect','citrus-export'}; "
                         "print('Installed core wheel metadata and imports passed')"],
                        cwd=directory, env=environment, check=True)
-        for command in ("citrus-prepare-data", "citrus-train", "citrus-val", "citrus-detect", "citrus-export"):
+        for command in ("citrus-prepare-data", "citrus-build-groups", "citrus-train",
+                        "citrus-val", "citrus-detect", "citrus-export"):
             subprocess.run([str(directory / "venv/bin" / command), "--help"],
                            cwd=directory, env=environment, check=True)
 
