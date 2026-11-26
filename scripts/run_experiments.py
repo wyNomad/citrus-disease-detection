@@ -1,7 +1,7 @@
 """Run the configured training and evaluation matrix for the disease dataset.
 
-Each entry trains once and is then evaluated on its own validation split plus
-every held-out acquisition environment. Training and evaluation reuse the
+Every entry trains once and is then evaluated on its own validation split plus
+each held-out acquisition environment. Training and evaluation reuse the
 ``citrus-train`` and ``citrus-val`` entry points so configuration snapshots,
 class-mapping checks and weight hashes keep their existing behaviour.
 """
@@ -45,11 +45,15 @@ def run(call: str, arguments: list[str]) -> int:
     return subprocess.run(command, cwd=ROOT).returncode
 
 
-def collect(name: str, dataset: str, tests: list[str], val_root: Path) -> dict:
+def tag_of(dataset: Path) -> str:
+    """Name the evaluation run after the dataset folder, e.g. ``lab_testA``."""
+    return dataset.parent.name
+
+
+def collect(name: str, tags: list[str], val_root: Path) -> dict:
     record = {"run": name, "metrics": {}}
-    targets = [("val", f"{name}-val")] + [(t, f"{name}-{t}") for t in tests]
-    for tag, folder in targets:
-        path = val_root / folder / "metrics.json"
+    for tag in tags:
+        path = val_root / f"{name}-{tag}" / "metrics.json"
         record["metrics"][tag] = (json.loads(path.read_text(encoding="utf-8"))
                                   if path.is_file() else None)
     return record
@@ -70,56 +74,57 @@ def main() -> None:
     args = parser.parse_args()
 
     matrix = yaml.safe_load(args.matrix.read_text(encoding="utf-8"))
-    tests = list(matrix.get("tests", []))
+    config = (ROOT / matrix["config"]).resolve()
+    settings = yaml.safe_load(config.read_text(encoding="utf-8"))
+    tests = [(ROOT / item).resolve() for item in matrix.get("tests", [])]
     project = (ROOT / args.project).resolve()
     val_root = project / "val"
     project.mkdir(parents=True, exist_ok=True)
     prepare_environment(project)
 
     for entry in matrix["runs"]:
-        config = ROOT / entry["config"]
-        settings = yaml.safe_load(config.read_text(encoding="utf-8"))
-        name = settings.get("name") or config.stem
+        name = entry["name"]
+        dataset = (ROOT / entry["data"]).resolve()
         if args.only and name not in args.only:
             continue
         print(f"\n=== {name} ===", flush=True)
 
-        weights = (project / "train" / name / "weights" / "best.pt")
+        weights = project / "train" / name / "weights" / "best.pt"
         if not args.eval_only:
             if weights.is_file():
                 print(f"  existing checkpoint, skipping training: {weights}", flush=True)
             else:
-                arguments = ["--config", str(config), "--weights-dir", str(ROOT / args.weights_dir),
-                             "--project", str(project / "train"), "--device", args.device]
+                arguments = ["--config", str(config), "--data", str(dataset),
+                             "--weights-dir", str(ROOT / args.weights_dir),
+                             "--project", str(project / "train"), "--name", name,
+                             "--device", args.device]
                 for flag, value in (("--epochs", args.epochs), ("--batch", args.batch),
                                     ("--workers", args.workers)):
                     if value is not None:
                         arguments += [flag, str(value)]
                 if run(TRAIN_CALL, arguments) != 0:
-                    print(f"  training failed, skipping evaluation", flush=True)
+                    print("  training failed, skipping evaluation", flush=True)
                     continue
         if not weights.is_file():
             print(f"  missing checkpoint: {weights}", flush=True)
             continue
 
-        targets = [(entry["dataset"], "val")] + [(t, "test") for t in tests]
-        for dataset, split in targets:
-            tag = f"{name}-{'val' if split == 'val' else dataset}"
-            output = val_root / tag
+        targets = [("val", dataset)] + [(tag_of(t), t) for t in tests]
+        for tag, data_path in targets:
+            output = val_root / f"{name}-{tag}"
             if output.exists():
                 print(f"  existing evaluation, skipping: {output.name}", flush=True)
                 continue
-            run(VAL_CALL, ["--weights", str(weights),
-                           "--data", str(ROOT / "configs/datasets" / f"{dataset}.yaml"),
+            split = "val" if tag == "val" else "test"
+            run(VAL_CALL, ["--weights", str(weights), "--data", str(data_path),
                            "--output", str(output), "--split", split,
                            "--imgsz", str(settings.get("imgsz", 640)),
                            "--batch", str(min(args.batch or 8, 8)),
                            "--device", args.device])
 
+    records = [collect(e["name"], ["val"] + [tag_of(t) for t in tests], val_root)
+               for e in matrix["runs"]]
     summary = project / "summary.json"
-    records = [collect((yaml.safe_load((ROOT / e["config"]).read_text(encoding="utf-8")).get("name")
-                        or Path(e["config"]).stem),
-                       e["dataset"], tests, val_root) for e in matrix["runs"]]
     summary.write_text(json.dumps(records, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     print(f"\nMetrics summary: {summary}")
 

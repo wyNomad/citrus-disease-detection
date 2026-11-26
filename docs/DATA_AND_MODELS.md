@@ -47,7 +47,9 @@ citrus-build-groups --source /path/to/raw --output data \
     --test testA --test testB --test testC
 ```
 
-输出 `data/lab_abc`、`data/lab_abcd`、`data/lab_abcde` 与 `data/lab_test{A,B,C}`，各自带 `data.yaml`；文件默认以符号链接接入，加 `--copy` 改为复制。类别 ID 沿用源数据集 `label_object.json` 的原始编号，不做重映射，以便与官方权重处于同一标签空间、可直接对比。对应配置位于 `configs/datasets/lab_*.yaml`。
+输出 `data/lab_abc`、`data/lab_abcd`、`data/lab_abcde` 与 `data/lab_test{A,B,C}`，每个目录自带一份 `data.yaml`，其中 `path: .` 使数据集目录自包含、可整体搬移。训练与评估直接引用这些文件，不再另存数据集配置副本。
+
+文件默认以符号链接接入，加 `--copy` 改为复制。类别 ID 沿用源数据集 `label_object.json` 的原始编号，不做重映射，以便与官方权重处于同一标签空间、可直接对比。
 
 实验矩阵与运行方式见 [实验设计](EXPERIMENTS.md)，矩阵配置位于 `configs/experiments/lab.yaml`。
 

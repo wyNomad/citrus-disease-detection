@@ -2,16 +2,19 @@
 # 训练与评估分别复用 citrus-train / citrus-val，本文件只描述编排关系。
 # 运行：python scripts/run_experiments.py --device 0
 
+# 三组共享的超参基线；数据集与实验名由每个 run 指定
+config: configs/training/lab.yaml
+
 # 独立测试集，按采集环境划分，用于跨场景泛化对比
 tests:
-  - lab_testA
-  - lab_testB
-  - lab_testC
+  - data/lab_testA/data.yaml
+  - data/lab_testB/data.yaml
+  - data/lab_testC/data.yaml
 
 runs:
-  - config: configs/training/lab_abc.yaml
-    dataset: lab_abc
-  - config: configs/training/lab_abcd.yaml
-    dataset: lab_abcd
-  - config: configs/training/lab_abcde.yaml
-    dataset: lab_abcde
+  - name: lab_abc
+    data: data/lab_abc/data.yaml
+  - name: lab_abcd
+    data: data/lab_abcd/data.yaml
+  - name: lab_abcde
+    data: data/lab_abcde/data.yaml

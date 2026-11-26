@@ -1,0 +1,16 @@
+# 病害检测实验超参基线
+# 三组类别组合（ABC / ABCD / ABCDE）共用本文件；数据集不在此处固定，
+# 由 --data 指定，实验矩阵 configs/experiments/lab.yaml 负责把两者配起来。
+model: yolo11n.pt
+name: lab_experiment
+exist_ok: false
+epochs: 100
+patience: 20
+pretrained: true
+imgsz: 640
+device: cpu
+workers: 8
+batch: 16
+amp: false
+seed: 42
+plots: true

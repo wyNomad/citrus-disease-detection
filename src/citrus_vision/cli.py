@@ -121,6 +121,8 @@ def detect_main():
 def train_main():
     parser = argparse.ArgumentParser(description="Train from a portable YAML configuration")
     parser.add_argument("--config", type=Path, default=Path("configs/training/citrus.yaml"))
+    parser.add_argument("--data", type=Path,
+                        help="override the dataset YAML named by the configuration")
     parser.add_argument("--weights-dir", type=Path, default=Path("weights"))
     parser.add_argument("--project", type=Path, default=Path("runs/train"))
     parser.add_argument("--epochs", type=int)
@@ -143,7 +145,13 @@ def train_main():
         weights = args.weights_dir / weights
     if not weights.is_file():
         raise FileNotFoundError(f"Prepare pretrained weights first: {weights}")
-    data_file = (args.config.resolve().parent / settings.pop("data")).resolve()
+    configured_data = settings.pop("data", None)
+    if args.data is not None:
+        data_file = args.data.expanduser().resolve()
+    elif configured_data is not None:
+        data_file = (args.config.resolve().parent / configured_data).resolve()
+    else:
+        parser.error("--data is required when the configuration does not name a dataset")
     data = _dataset_config(data_file, ("train", "val"))
     args.project.mkdir(parents=True, exist_ok=True)
     snapshots = args.project.resolve() / "configs"

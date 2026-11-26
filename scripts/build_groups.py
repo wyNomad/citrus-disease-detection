@@ -1,7 +1,7 @@
 """Command entry point; install the shared package with pip install -e . first."""
 
-from citrus_vision.group_dataset import main
+from citrus_vision.dataset import build_groups_main
 
 
 if __name__ == "__main__":
-    main()
+    build_groups_main()

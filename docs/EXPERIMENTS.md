@@ -21,13 +21,20 @@
 | 采集环境 | testA 手机·田间或纯色背景、testB 相机·田间、testC 白板二次拍摄 | 跨环境的精度落差 |
 | 架构对比 | 官方 YOLOv5l 基线与 YOLO11n | 参数量与精度的权衡 |
 
-矩阵定义在 `configs/experiments/lab.yaml`，训练与评估配置分别为 `configs/training/lab_*.yaml` 与 `configs/datasets/lab_*.yaml`。
+矩阵定义在 `configs/experiments/lab.yaml`：三组共用一份超参基线 `configs/training/lab.yaml`，数据集由矩阵按 run 指定为 `data/lab_*/data.yaml`（该文件由 `citrus-build-groups` 生成）。
 
 ```bash
+citrus-build-groups --source /path/to/raw --output data --test testA --test testB --test testC
 python scripts/run_experiments.py --device 0
 ```
 
-每次实验保留 `citrus-train` 生成的配置快照与 `citrus-val` 记录的权重 SHA-256，指标汇总写入 `runs/summary.json`。本机目前只完成链路冒烟（`configs/training/lab_smoke.yaml`，抽样 3%、2 轮），正式精度需在 GPU 环境跑完整矩阵后补记。
+每次实验保留 `citrus-train` 生成的配置快照与 `citrus-val` 记录的权重 SHA-256，指标汇总写入 `runs/summary.json`。本机目前只完成链路冒烟（`configs/training/lab_smoke.yaml`，抽样 3%、2 轮）：
+
+```bash
+citrus-train --config configs/training/lab_smoke.yaml --data data/lab_abc/data.yaml --epochs 2
+```
+
+正式精度需在 GPU 环境跑完整矩阵后补记。
 
 ## 已有验收
 

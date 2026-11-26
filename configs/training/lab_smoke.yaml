@@ -1,6 +1,6 @@
-# 训练配置 · 链路冒烟：抽样 3% 数据、2 轮，仅验证数据管线与训练评估链路贯通
+# 链路冒烟配置：只验证数据管线与训练/评估链路是否贯通，不用于精度评价。
+# 使用时需用 --data 指向任意一组已构建数据集，并用 --epochs 覆盖轮次。
 model: yolo11n.pt
-data: ../datasets/lab_abc.yaml
 name: lab_smoke
 exist_ok: false
 epochs: 2
@@ -12,6 +12,6 @@ workers: 0
 batch: 16
 amp: false
 seed: 42
-# 仅保留约 3% 的训练样本，用于快速验证
-fraction: 0.03
 plots: true
+# 仅保留约 3% 的训练样本，让冒烟在单机 CPU 上几分钟内跑完
+fraction: 0.03
